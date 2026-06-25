@@ -44,7 +44,7 @@ mcpServers:
     args:
       - run
       - --directory
-      - /Users/fiifinketia/vztd.xyz/ananselabs/bulkclix-mcp-python
+      - /Users/fiifinketia/vztd.xyz/ananselabs/bulkclix-mcp
       - server.py
     type: stdio
 ```
