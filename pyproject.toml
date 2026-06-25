@@ -1,0 +1,15 @@
+[project]
+name = "bulkclix-mcp"
+version = "1.0.0"
+description = "BulkClix MCP Server using Python FastMCP"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "httpx>=0.27.0",
+    "starlette>=0.37.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.scripts]
+bulkclix-mcp = "server:mcp.run"
