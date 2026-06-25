@@ -44,7 +44,7 @@ mcpServers:
     args:
       - run
       - --directory
-      - /Users/fiifinketia/vztd.xyz/ananselabs/bulkclix-mcp
+      - /path/to/bulkclix-mcp
       - server.py
     type: stdio
 ```
@@ -54,6 +54,7 @@ mcpServers:
 Run the server on a port (e.g. port `8000`):
 
 ```bash
+cd bulkclix-mcp
 uv run server.py sse
 ```
 
