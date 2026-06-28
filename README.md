@@ -29,6 +29,23 @@ Using `uv` is highly recommended as it automatically manages dependencies:
 uv run server.py
 ```
 
+If you want the server to use a default BulkClix key, set `BULKCLIX_API_KEY` before starting it:
+
+```bash
+export BULKCLIX_API_KEY="your-bulkclix-api-key"
+uv run server.py mcp
+```
+
+To expose admin-only workflows like contact management, enable internal tools on the server:
+
+```bash
+export BULKCLIX_ENABLE_INTERNAL_TOOLS=true
+```
+
+The public chat-facing tools now work without caller-supplied keys.
+SMS and OTP tools automatically pick the first sender ID returned by BulkClix.
+Airtime and data purchases first collect payment through MoMo, then complete the fulfillment after payment is confirmed.
+
 ---
 
 ## Configuration in LibreChat
@@ -49,16 +66,16 @@ mcpServers:
     type: stdio
 ```
 
-### Option 2: HTTP / SSE transport (Remote/Streamable)
+### Option 2: HTTP / MCP transport (Remote/Streamable)
 
 Run the server on a port (e.g. port `8000`):
 
 ```bash
 cd bulkclix-mcp
-uv run server.py sse
+uv run server.py mcp
 ```
 
-Then configure LibreChat to use the SSE endpoint:
+Then configure LibreChat to use the MCP-over-HTTP endpoint:
 
 ```yaml
 mcpServers:
@@ -66,6 +83,15 @@ mcpServers:
     url: http://localhost:8000/sse
     type: sse
 ```
+
+You can then tunnel that port with `localtunnel`:
+
+```bash
+npx localtunnel --port 8000
+```
+
+If `BULKCLIX_API_KEY` is set on the machine running the server, the client can use the public tools without providing any per-call key.
+Admin-only tools are hidden unless `BULKCLIX_ENABLE_INTERNAL_TOOLS=true` is set on the server.
 
 ---
 
