@@ -13,7 +13,7 @@ if [[ -z "${BULKCLIX_API_KEY:-}" ]]; then
 fi
 
 # Start the MCP server (SSE transport) in the background.
-python bulkclix_mcp.py sse &
+python server.py sse &
 MCP_PID=$!
 
 # Start cloudflared in the background too, tunneling to the local MCP

@@ -19,7 +19,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY bulkclix_mcp.py entrypoint.sh ./
+COPY server.py entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 
 # Run as non-root.
