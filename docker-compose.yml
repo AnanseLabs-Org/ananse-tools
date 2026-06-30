@@ -11,6 +11,7 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/ananse_db
       - BULKCLIX_API_KEY=${BULKCLIX_API_KEY:-}
       - BULKCLIX_ENABLE_INTERNAL_TOOLS=${BULKCLIX_ENABLE_INTERNAL_TOOLS:-false}
+      - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
       - mongodb
     restart: unless-stopped
