@@ -106,3 +106,7 @@ If `BULKCLIX_API_KEY` is set on the machine running the server, the client can u
 Admin-only tools are hidden unless `BULKCLIX_ENABLE_INTERNAL_TOOLS=true` is set on the server.
 
 ---
+
+## License
+
+This work is licensed under a [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License (CC BY-NC-ND 4.0)](https://creativecommons.org/licenses/by-nc-nd/4.0/). See the `LICENSE` file for details.
