@@ -4,13 +4,26 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from auth_provider import InMemoryOAuthProvider
+from auth0_verifier import Auth0TokenVerifier
 
 auth_provider = None
 auth_settings = None
+token_verifier = None
 
-if os.environ.get("MCP_ENABLE_OAUTH", "false").lower() == "true":
+public_url = os.environ.get("MCP_PUBLIC_URL", "https://tools.ananselabs.org")
+
+if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
+    auth0_domain = os.environ.get("AUTH0_DOMAIN", "dev-0rvyw5vo8eu0rdbp.uk.auth0.com")
+    auth0_audience = os.environ.get("AUTH0_AUDIENCE", "https://dev-0rvyw5vo8eu0rdbp.uk.auth0.com/api/v2/")
+    
+    token_verifier = Auth0TokenVerifier(domain=auth0_domain, audience=auth0_audience)
+    auth_settings = AuthSettings(
+        issuer_url=f"https://{auth0_domain}/",
+        resource_server_url=public_url,
+        required_scopes=["mcp"]
+    )
+elif os.environ.get("MCP_ENABLE_OAUTH", "false").lower() == "true":
     auth_provider = InMemoryOAuthProvider()
-    public_url = os.environ.get("MCP_PUBLIC_URL", "https://tools.ananselabs.org")
     
     auth_settings = AuthSettings(
         issuer_url=public_url,
@@ -30,6 +43,7 @@ mcp = FastMCP(
     port=int(os.environ.get("MCP_PORT", "8000")),
     sse_path="/",
     auth_server_provider=auth_provider,
+    token_verifier=token_verifier,
     auth=auth_settings,
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=os.environ.get("MCP_DNS_REBINDING_PROTECTION", "true").lower() == "true",
