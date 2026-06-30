@@ -7,7 +7,6 @@ from fastmcp.server.auth.providers.auth0 import Auth0Provider
 # Configure settings globally
 fastmcp.settings.sse_path = "/"
 fastmcp.settings.message_path = "/messages/"
-fastmcp.settings.message_public_url = os.environ.get("MCP_PUBLIC_URL")
 
 auth_provider = None
 
