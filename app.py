@@ -23,8 +23,6 @@ class SSESessionRewriteMiddleware:
             query_string = scope.get("query_string", b"").decode("utf-8")
             if "session_id=" in query_string:
                 scope["path"] = "/messages/"
-            else:
-                scope["path"] = "/mcp"
         await self.app(scope, receive, send)
 
 original_sse_app = mcp.sse_app
