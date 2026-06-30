@@ -91,8 +91,8 @@ Then configure LibreChat to use the MCP-over-HTTP endpoint:
 
 ```yaml
 mcpServers:
-  ananse:
-    url: http://localhost:8000/sse
+  bulkclix:
+    url: http://localhost:8000/
     type: sse
 ```
 
