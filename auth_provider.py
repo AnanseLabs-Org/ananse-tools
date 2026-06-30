@@ -1,6 +1,7 @@
 import time
 import secrets
 from typing import Dict, Any
+from pydantic import AnyUrl
 from mcp.server.auth.provider import (
     OAuthAuthorizationServerProvider,
     OAuthClientInformationFull,
@@ -25,7 +26,8 @@ class InMemoryOAuthProvider:
             client_id="bulkclix-client",
             client_secret="bulkclix-secret",
             client_id_issued_at=int(time.time()),
-            client_secret_expires_at=None
+            client_secret_expires_at=None,
+            redirect_uris=[AnyUrl("https://tools.ananselabs.org/")]
         )
         self._clients["bulkclix-client"] = default_client
 
@@ -38,7 +40,8 @@ class InMemoryOAuthProvider:
                 client_id=secrets.token_hex(8),
                 client_secret=secrets.token_hex(16),
                 client_id_issued_at=int(time.time()),
-                client_secret_expires_at=None
+                client_secret_expires_at=None,
+                redirect_uris=client_info.redirect_uris
             )
         self._clients[client_info.client_id] = client_info
 
