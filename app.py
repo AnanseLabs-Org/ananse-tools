@@ -8,7 +8,79 @@ from fastmcp.server.auth.providers.auth0 import Auth0Provider
 fastmcp.settings.sse_path = "/"
 fastmcp.settings.message_path = "/messages/"
 
-auth_provider = None
+from typing import Any, Mapping, Sequence
+from db import _get_db
+
+class MongoKeyValue:
+    def __init__(self, default_collection: str = "oauth_store"):
+        self.default_collection = default_collection
+
+    def _get_collection(self, name: str | None):
+        col_name = name or self.default_collection
+        db = _get_db()
+        if db is None:
+            raise RuntimeError("Database connection not initialized")
+        return db[col_name]
+
+    async def get(self, key: str, *, collection: str | None = None) -> dict[str, Any] | None:
+        col = self._get_collection(collection)
+        doc = await col.find_one({"_id": key})
+        if doc:
+            val = dict(doc)
+            val.pop("_id", None)
+            return val
+        return None
+
+    async def ttl(self, key: str, *, collection: str | None = None) -> tuple[dict[str, Any] | None, float | None]:
+        val = await self.get(key, collection=collection)
+        return val, None
+
+    async def put(self, key: str, value: Mapping[str, Any], *, collection: str | None = None, ttl: Any = None) -> None:
+        col = self._get_collection(collection)
+        data = dict(value)
+        data["_id"] = key
+        await col.replace_one({"_id": key}, data, upsert=True)
+
+    async def delete(self, key: str, *, collection: str | None = None) -> bool:
+        col = self._get_collection(collection)
+        result = await col.delete_one({"_id": key})
+        return result.deleted_count > 0
+
+    async def get_many(self, keys: Sequence[str], *, collection: str | None = None) -> list[dict[str, Any] | None]:
+        col = self._get_collection(collection)
+        cursor = col.find({"_id": {"$in": list(keys)}})
+        docs = await cursor.to_list(length=len(keys))
+        docs_map = {doc["_id"]: doc for doc in docs}
+        results = []
+        for k in keys:
+            doc = docs_map.get(k)
+            if doc:
+                val = dict(doc)
+                val.pop("_id", None)
+                results.append(val)
+            else:
+                results.append(None)
+        return results
+
+    async def ttl_many(self, keys: Sequence[str], *, collection: str | None = None) -> list[tuple[dict[str, Any] | None, float | None]]:
+        vals = await self.get_many(keys, collection=collection)
+        return [(val, None) for val in vals]
+
+    async def put_many(self, keys: Sequence[str], values: Sequence[Mapping[str, Any]], *, collection: str | None = None, ttl: Any = None) -> None:
+        col = self._get_collection(collection)
+        from pymongo import ReplaceOne
+        operations = []
+        for k, v in zip(keys, values):
+            data = dict(v)
+            data["_id"] = k
+            operations.append(ReplaceOne({"_id": k}, data, upsert=True))
+        if operations:
+            await col.bulk_write(operations)
+
+    async def delete_many(self, keys: Sequence[str], *, collection: str | None = None) -> int:
+        col = self._get_collection(collection)
+        result = await col.delete_many({"_id": {"$in": list(keys)}})
+        return result.deleted_count
 
 if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
     auth0_domain = os.environ.get("AUTH0_DOMAIN")
@@ -26,6 +98,7 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
         client_secret=auth0_client_secret,
         audience=auth0_audience,
         base_url=public_url,
+        client_storage=MongoKeyValue(),
     )
 
 mcp = FastMCP("ananse-mcp", auth=auth_provider)
