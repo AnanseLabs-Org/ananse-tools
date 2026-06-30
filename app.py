@@ -33,7 +33,7 @@ mcp = FastMCP(
     auth=auth_settings,
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=os.environ.get("MCP_DNS_REBINDING_PROTECTION", "true").lower() == "true",
-        allowed_hosts=[h.strip() for h in os.environ.get("MCP_PUBLIC_HOSTNAME", "localhost,127.0.0.1,*.ananselabs.org").split(",") if h.strip()],
+        allowed_hosts=[h.strip() for h in os.environ.get("MCP_PUBLIC_HOSTNAME", "localhost,127.0.0.1,tools.ananselabs.org,*.ananselabs.org").split(",") if h.strip()],
     ),
 )
 
