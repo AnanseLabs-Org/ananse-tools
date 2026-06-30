@@ -7,40 +7,8 @@ mcp = FastMCP(
     "ananse-mcp",
     host=os.environ.get("MCP_HOST", "0.0.0.0"),
     port=int(os.environ.get("MCP_PORT", "8000")),
-    sse_path="/mcp",
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=os.environ.get("MCP_DNS_REBINDING_PROTECTION", "true").lower() == "true",
         allowed_hosts=[h.strip() for h in os.environ.get("MCP_PUBLIC_HOSTNAME", "localhost,127.0.0.1").split(",") if h.strip()],
     ),
 )
-
-class SSESessionRewriteMiddleware:
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "http":
-            path = scope["path"]
-            method = scope["method"]
-            query_string = scope.get("query_string", b"").decode("utf-8")
-            
-            # 1. Route GET handshakes to the root SSE path "/"
-            if method == "GET":
-                if path in {"/sse", "/mcp"}:
-                    scope["path"] = "/"
-            
-            # 2. Route POST messages to either "/messages/" or the "/mcp" stateless route
-            elif method == "POST":
-                if path in {"/", "/sse", "/mcp"}:
-                    if "session_id=" in query_string:
-                        scope["path"] = "/messages/"
-                    else:
-                        scope["path"] = "/mcp"
-                        
-        await self.app(scope, receive, send)
-
-original_sse_app = mcp.sse_app
-def custom_sse_app(*args, **kwargs):
-    app = original_sse_app(*args, **kwargs)
-    return SSESessionRewriteMiddleware(app)
-mcp.sse_app = custom_sse_app
