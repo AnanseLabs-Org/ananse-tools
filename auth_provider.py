@@ -70,13 +70,16 @@ class InMemoryOAuthProvider:
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         if not client_info.client_id:
-            client_info = OAuthClientInformationFull(
-                client_id=secrets.token_hex(8),
-                client_secret=secrets.token_hex(16),
-                client_id_issued_at=int(time.time()),
-                client_secret_expires_at=None,
-                redirect_uris=client_info.redirect_uris
-            )
+            client_info = client_info.model_copy(update={
+                "client_id": secrets.token_hex(8),
+                "client_secret": secrets.token_hex(16),
+                "client_id_issued_at": int(time.time()),
+                "client_secret_expires_at": None,
+                "scope": client_info.scope or "mcp"
+            })
+        else:
+            if not client_info.scope:
+                client_info = client_info.model_copy(update={"scope": "mcp"})
         self._clients[client_info.client_id] = client_info
         # Save to MongoDB
         db = _get_db()
