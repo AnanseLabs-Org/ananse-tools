@@ -13,9 +13,11 @@ async def otp_send_sms(
     length: int = 4
 ) -> Dict[str, Any]:
     """
-    Send an OTP (One-Time Password) via SMS. Use <%otp_code%> placeholder inside your template.
+    Send an OTP (One-Time Password) via SMS.
+    CRITICAL: The `message` parameter MUST contain the exact placeholder `<%otp_code%>`. If this placeholder is missing, the API call will fail with a 422 error.
+    
     :param phone_number: Recipient phone number (e.g. '0541000000').
-    :param message: Message template containing <%otp_code%> (e.g. 'Code is: <%otp_code%>').
+    :param message: Message template containing `<%otp_code%>` (e.g. 'Your verification code is: <%otp_code%>').
     :param expiry: OTP validity duration in minutes (default 5).
     :param length: Digit length of the OTP (default 4).
     """
@@ -65,10 +67,12 @@ async def otp_send_email(
     length: int = 4
 ) -> Dict[str, Any]:
     """
-    Send an OTP (One-Time Password) via Email. Use <%otp_code%> placeholder.
+    Send an OTP (One-Time Password) via Email.
+    CRITICAL: The `message` parameter MUST contain the exact placeholder `<%otp_code%>`. If this placeholder is missing, the API call will fail with a 422 error.
+    
     :param email: Recipient email address.
     :param subject: Email subject.
-    :param message: Email body containing <%otp_code%> template.
+    :param message: Email body containing `<%otp_code%>` template (e.g. 'Your verification code is: <%otp_code%>').
     :param expiry: OTP validity duration in minutes (default 5).
     :param length: Digit length of the OTP (default 4).
     """

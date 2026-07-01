@@ -11,33 +11,33 @@ STATIC_VENDORS_LIST = [
         "payment_methods": ["momo"],
         "vendor_type": "external_api"
     },
-    # {
-    #     "vendor_id": "f5f0b5aa-399a-4c28-98b7-6b6f3ff8cfa0",
-    #     "name": "MTN Airtime & Data",
-    #     "categories": ["airtime", "data", "topup", "bundles"],
-    #     "vendor_type": "internal_service",
-    #     "service": "telecom",
-    #     "network": "MTN",
-    #     "payment_methods": ["momo"]
-    # },
-    # {
-    #     "vendor_id": "a90b4cc5-5c12-4217-bfd2-c76a54f0a99c",
-    #     "name": "Telecel Airtime & Data",
-    #     "categories": ["airtime", "data", "topup", "bundles"],
-    #     "vendor_type": "internal_service",
-    #     "service": "telecom",
-    #     "network": "TELECEL",
-    #     "payment_methods": ["momo"]
-    # },
-    # {
-    #     "vendor_id": "d02fa3c5-92a0-410a-8bf7-e16fa5cfc99b",
-    #     "name": "AirtelTigo Airtime & Data",
-    #     "categories": ["airtime", "data", "topup", "bundles"],
-    #     "vendor_type": "internal_service",
-    #     "service": "telecom",
-    #     "network": "AIRTELTIGO",
-    #     "payment_methods": ["momo"]
-    # }
+    {
+        "vendor_id": "f5f0b5aa-399a-4c28-98b7-6b6f3ff8cfa0",
+        "name": "MTN Airtime & Data",
+        "categories": ["airtime", "data", "topup", "bundles"],
+        "vendor_type": "internal_service",
+        "service": "telecom",
+        "network": "MTN",
+        "payment_methods": ["momo"]
+    },
+    {
+        "vendor_id": "a90b4cc5-5c12-4217-bfd2-c76a54f0a99c",
+        "name": "Telecel Airtime & Data",
+        "categories": ["airtime", "data", "topup", "bundles"],
+        "vendor_type": "internal_service",
+        "service": "telecom",
+        "network": "TELECEL",
+        "payment_methods": ["momo"]
+    },
+    {
+        "vendor_id": "d02fa3c5-92a0-410a-8bf7-e16fa5cfc99b",
+        "name": "AirtelTigo Airtime & Data",
+        "categories": ["airtime", "data", "topup", "bundles"],
+        "vendor_type": "internal_service",
+        "service": "telecom",
+        "network": "AIRTELTIGO",
+        "payment_methods": ["momo"]
+    }
 ]
 
 _INTERNAL_ONLY_FIELDS = {"menu_url", "order_url"}

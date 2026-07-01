@@ -78,9 +78,12 @@ async def pay_verify_otp(
 ) -> Dict[str, Any]:
     """
     Verify a payment OTP after the customer reads the code from their phone and sends it in chat.
+    
+    CRITICAL: This is ONLY for validating payment-related transactions. The `request_id` MUST be the one returned in the response of a payment/purchase initiation tool (e.g., `airtime_purchase`, `data_purchase`, or `momo_collect`), NOT from `otp_send_sms`. Providing a standard SMS OTP request ID will result in a 404 Error.
+    
     :param code: OTP code entered by the customer from their phone.
-    :param request_id: Request ID returned when the payment was initiated.
-    :param phone_number: The phone number used for the payment.
+    :param request_id: Request ID returned from the payment/purchase initiation response.
+    :param phone_number: The phone number used for the payment transaction.
     """
     bearer_token = _get_payment_bearer_token()
     extra_headers = {}
