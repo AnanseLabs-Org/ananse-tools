@@ -140,39 +140,8 @@ def custom_http_app(*args, **kwargs):
             return Response("Challenge token not configured in environment", status_code=500, media_type="text/plain")
         return PlainTextResponse(token)
 
-    async def whatsapp_webhook(request):
-        try:
-            form_data = await request.form()
-            from_val = form_data.get("From")
-            to_val = form_data.get("To")
-            body_val = form_data.get("Body")
-            msg_sid = form_data.get("MessageSid")
-
-            from datetime import datetime, timezone
-            db = _get_db()
-            if db is not None:
-                await db.whatsapp_messages.update_one(
-                    {"message_sid": msg_sid},
-                    {"$set": {
-                        "message_sid": msg_sid,
-                        "from": from_val,
-                        "to": to_val,
-                        "body": body_val,
-                        "received_at": datetime.now(timezone.utc)
-                    }},
-                    upsert=True
-                )
-            
-            from starlette.responses import Response
-            return Response("<Response></Response>", media_type="application/xml")
-        except Exception as e:
-            return PlainTextResponse(f"Error: {e}", status_code=500)
-
     app.routes.append(
         Route("/.well-known/openai-apps-challenge", endpoint=challenge_endpoint, methods=["GET"])
-    )
-    app.routes.append(
-        Route("/webhook/whatsapp", endpoint=whatsapp_webhook, methods=["POST"])
     )
     
     return SSESessionRewriteMiddleware(app)

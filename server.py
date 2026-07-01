@@ -19,7 +19,6 @@ from tools import kyc as _kyc  # noqa: F401
 from tools import contacts as _contacts  # noqa: F401
 from tools import account as _account  # noqa: F401
 from tools import food_orders as _food_orders  # noqa: F401
-from tools import whatsapp as _whatsapp  # noqa: F401
 
 from payments import tools as _payment_tools  # noqa: F401
 from vendors import tools as _vendor_tools  # noqa: F401
