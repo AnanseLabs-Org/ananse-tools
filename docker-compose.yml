@@ -1,7 +1,8 @@
-version: "3.8"
+name: ananselabs-tools
 
 services:
   mcp-server:
+    container_name: hst-ananselabs-tools-mcp
     build: .
     ports:
       - "8000:8000"
@@ -29,6 +30,7 @@ services:
     restart: unless-stopped
 
   mongodb:
+    container_name: hst-ananselabs-tools-mongodb
     image: mongo:7.0
     ports:
       - "27017:27017"
@@ -39,6 +41,7 @@ services:
     restart: unless-stopped
 
   n8n:
+    container_name: hst-ananselabs-tools-n8n
     image: docker.n8n.io/n8nio/n8n:latest
     restart: unless-stopped
     environment:
@@ -65,6 +68,7 @@ services:
       - mongodb
 
   cloudflared-n8n:
+    container_name: hst-ananselabs-tools-cloudflared
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
@@ -77,8 +81,8 @@ services:
 
   # ===== CORE: Docker Socket Proxy (sole container with /var/run/docker.sock access) =====
   docker-proxy:
+    container_name: hst-ananselabs-tools-docker-proxy
     image: tecnativa/docker-socket-proxy
-    container_name: openwa-docker-proxy
     restart: unless-stopped
     networks:
       - internal-docker
@@ -98,8 +102,8 @@ services:
 
   # ===== CORE: OpenWA Backend API =====
   openwa-api:
+    container_name: hst-ananselabs-tools-openwa
     image: ghcr.io/rmyndharis/openwa:0.7.7
-    container_name: openwa-api
     restart: unless-stopped
     networks:
       - openwa-network
@@ -155,7 +159,7 @@ services:
       - S3_REGION=${S3_REGION:-}
       - S3_BUCKET=${S3_BUCKET:-}
       - REDIS_ENABLED=true
-      - REDIS_HOST=openwa-redis
+      - REDIS_HOST=redis
       - REDIS_PORT=6379
       - WEBHOOK_TIMEOUT=${WEBHOOK_TIMEOUT:-10000}
       - WEBHOOK_MAX_RETRIES=${WEBHOOK_MAX_RETRIES:-3}
@@ -165,7 +169,7 @@ services:
       - PLUGINS_ENABLED=${PLUGINS_ENABLED:-true}
       - PLUGINS_DIR=${PLUGINS_DIR:-/app/data/plugins}
       - API_MASTER_KEY=${API_MASTER_KEY:-}
-      - DOCKER_HOST=tcp://openwa-docker-proxy:2375
+      - DOCKER_HOST=tcp://docker-proxy:2375
     volumes:
       - openwa-data:/app/data
       - ./docker-compose.yml:/app/docker-compose.yml:ro
@@ -192,8 +196,8 @@ services:
 
   # ===== OPTIONAL: Built-in Redis =====
   redis:
+    container_name: hst-ananselabs-tools-redis
     image: redis:7-alpine
-    container_name: openwa-redis
     restart: unless-stopped
     networks:
       - openwa-network
@@ -214,8 +218,8 @@ services:
 
   # ===== LOCAL SEMANTIC SEARCH: Ollama =====
   ollama:
+    container_name: hst-ananselabs-tools-ollama
     image: ollama/ollama:latest
-    container_name: openwa-ollama
     restart: unless-stopped
     volumes:
       - ollama-data:/root/.ollama
@@ -226,7 +230,11 @@ services:
 
 volumes:
   mongo_data:
+    name: bulkclix-mcp_mongo_data
+    external: true
   n8n_data:
+    name: bulkclix-mcp_n8n_data
+    external: true
   openwa-data:
     name: openwa_openwa-data
     driver: local
