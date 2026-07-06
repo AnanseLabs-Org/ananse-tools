@@ -105,7 +105,21 @@ class VendorOrderItem(BaseModel):
     addon_ids: List[int] = Field(default_factory=list, description="List of integer IDs of addons to include")
 
 @mcp.tool(
-    description="Place an order with a food/goods vendor and initiate mobile money payment via BulkClix. :param vendor_id: Vendor's UUID. :param items: List of items to order, with dish_id, quantity, and addon_ids. :param payment_number: Mobile money number to charge (e.g. '0544929180'). :param network: Mobile money network code (e.g. 'MTN'). :param order_type: 'inhouse' or 'delivery' — must be one of the vendor's supported order_types. :param table_number: Table number. Required when order_type is 'inhouse'. :param delivery_address: Delivery address. Required when order_type is 'delivery'.",
+    description=(
+        "Place an order with a food/goods vendor and initiate mobile money payment via BulkClix. "
+        "IMPORTANT: Before calling this tool you MUST have collected ALL required fields from the user: "
+        "(1) if order_type='inhouse' — you MUST ask the user for their table_number first; "
+        "(2) if order_type='delivery' — you MUST ask the user for their delivery_address first. "
+        "Do NOT call this tool without those values — the tool will fail. "
+        ":param vendor_id: Vendor's UUID. "
+        ":param items: List of items to order, with dish_id, quantity, and addon_ids. "
+        ":param payment_number: Mobile money number to charge (e.g. '0544929180'). "
+        ":param network: Mobile money network code (e.g. 'MTN'). "
+        ":param order_type: 'inhouse' or 'delivery' — must be one of the vendor's supported order_types. "
+        ":param table_number: Table number string. REQUIRED when order_type is 'inhouse' — ask the user before calling. "
+        ":param delivery_address: Delivery address string. REQUIRED when order_type is 'delivery' — ask the user before calling. "
+        ":returns: dict with success, order_id, payment status, and vendor confirmation."
+    ),
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def create_verified_vendors_order(
