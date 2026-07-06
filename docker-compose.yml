@@ -195,6 +195,7 @@ services:
     restart: unless-stopped
     networks:
       - openwa-network
+      - default
     security_opt:
       - 'no-new-privileges:true'
     command: redis-server --appendonly yes
