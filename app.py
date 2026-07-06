@@ -106,8 +106,12 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
 
     async def custom_verify_token(token: str):
         static_token = os.environ.get("MCP_STATIC_TOKEN")
-        print(f"DEBUG: custom_verify_token called with token={token} (expected={static_token})", flush=True)
-        if static_token and token == static_token:
+        clean_token = token
+        if token.lower().startswith("bearer "):
+            clean_token = token[7:]
+            
+        print(f"DEBUG: custom_verify_token called with token={token} (clean={clean_token}) (expected={static_token})", flush=True)
+        if static_token and clean_token == static_token:
             from fastmcp.server.auth.auth import AccessToken
             print("DEBUG: custom_verify_token SUCCESS", flush=True)
             return AccessToken(
