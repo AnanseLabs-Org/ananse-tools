@@ -20,6 +20,7 @@ services:
       - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID:-}
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET:-}
       - OPENAI_APPS_CHALLENGE_TOKEN=${OPENAI_APPS_CHALLENGE_TOKEN:-}
+      - MCP_STATIC_TOKEN=${MCP_STATIC_TOKEN:-}
     depends_on:
       - mongodb
     networks:
