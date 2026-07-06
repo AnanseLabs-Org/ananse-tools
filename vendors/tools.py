@@ -142,10 +142,11 @@ async def create_verified_vendors_order(
     :param table_number: Table number. Required when order_type is "inhouse".
     :param delivery_address: Delivery address. Required when order_type is "delivery".
     """
-    if not isinstance(table_number, str):
-        table_number = None
-    if not isinstance(delivery_address, str):
-        delivery_address = None
+    # Coerce to str so integer table numbers (e.g. 1) are accepted
+    if table_number is not None:
+        table_number = str(table_number).strip() or None
+    if delivery_address is not None:
+        delivery_address = str(delivery_address).strip() or None
 
     try:
         vendor = _lookup_vendor(vendor_id)
