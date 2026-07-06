@@ -126,7 +126,11 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
 
     auth_provider.verify_token = custom_verify_token
 
-mcp = FastMCP("ananse-mcp", auth=auth_provider)
+mcp = FastMCP(
+    "ananse-mcp",
+    instructions="This server provides tools for SMS, Airtime/Data purchases, Food Orders, KYC, OTP verification, and Contacts management.",
+    auth=auth_provider
+)
 
 class SSESessionRewriteMiddleware:
     def __init__(self, app):

@@ -21,6 +21,7 @@ services:
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET:-}
       - OPENAI_APPS_CHALLENGE_TOKEN=${OPENAI_APPS_CHALLENGE_TOKEN:-}
       - MCP_STATIC_TOKEN=${MCP_STATIC_TOKEN:-}
+      - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://ollama:11434}
     depends_on:
       - mongodb
     networks:
@@ -211,6 +212,18 @@ services:
       - 'com.openwa.service=cache'
       - 'com.openwa.builtin=true'
 
+  # ===== LOCAL SEMANTIC SEARCH: Ollama =====
+  ollama:
+    image: ollama/ollama:latest
+    container_name: openwa-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - default
+    ports:
+      - "11434:11434"
+
 volumes:
   mongo_data:
   n8n_data:
@@ -219,6 +232,9 @@ volumes:
     driver: local
   redis-data:
     name: openwa_redis-data
+    driver: local
+  ollama-data:
+    name: openwa_ollama-data
     driver: local
 
 networks:

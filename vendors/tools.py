@@ -13,8 +13,8 @@ from vendors.menu import _flatten_menu
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def get_verified_vendors(
     *,
-    vendor_id: Optional[str] = None,
-    category: Optional[str] = None,
+    vendor_id: Any = None,
+    category: Any = None,
 ) -> Dict[str, Any]:
     """
     List available vendors to purchase goods from using BulkClix payment.
@@ -22,6 +22,11 @@ async def get_verified_vendors(
     :param category: Vendor's category of goods (e.g. "restaurant", "food", "airtime").
         If given, filters vendors using case-insensitive substring and synonym expansion.
     """
+    if not isinstance(vendor_id, str):
+        vendor_id = None
+    if not isinstance(category, str):
+        category = None
+
     if vendor_id:
         vendor = _lookup_vendor(vendor_id)
         if vendor is None:
@@ -46,7 +51,7 @@ async def get_verified_vendors(
 async def get_verified_vendors_menu(
     *,
     vendor_id: str,
-    query: Optional[str] = None,
+    query: Any = None,
 ) -> Dict[str, Any]:
     """
     List available menu items for a vendor, flattened and checkout-ready —
@@ -54,6 +59,9 @@ async def get_verified_vendors_menu(
     :param vendor_id: Vendor's UUID.
     :param query: Optional case-insensitive substring filter on dish name.
     """
+    if not isinstance(query, str):
+        query = None
+
     vendor = _lookup_vendor(vendor_id)
     if vendor is None:
         return {"success": False, "error": f"No vendor found with id {vendor_id!r}"}
@@ -98,8 +106,8 @@ async def create_verified_vendors_order(
     payment_number: str,
     network: str,
     order_type: str = "inhouse",
-    table_number: Optional[str] = None,
-    delivery_address: Optional[str] = None,
+    table_number: Any = None,
+    delivery_address: Any = None,
 ) -> Dict[str, Any]:
     """
     Place an order with a food/goods vendor and initiate mobile money payment via BulkClix.
@@ -111,6 +119,11 @@ async def create_verified_vendors_order(
     :param table_number: Table number. Required when order_type is "inhouse".
     :param delivery_address: Delivery address. Required when order_type is "delivery".
     """
+    if not isinstance(table_number, str):
+        table_number = None
+    if not isinstance(delivery_address, str):
+        delivery_address = None
+
     try:
         vendor = _lookup_vendor(vendor_id)
         if vendor is None:
@@ -173,49 +186,24 @@ async def create_verified_vendors_order(
 async def find_food_items(
     *,
     query: str,
-    vendor_id: Optional[str] = None
+    vendor_id: Any = None
 ) -> Dict[str, Any]:
     """
     Search for food items, dishes, pizza, rice, chicken, or menus across all verified vendors or a specific vendor.
     Use this when asking 'what food is available', 'show me the menu', 'do you have pizza', 'search menu for burger'.
     """
+    if not isinstance(vendor_id, str):
+        vendor_id = None
+
     try:
-        if vendor_id:
-            vendors_to_search = [{"vendor_id": vendor_id}]
-        else:
-            vendors_res = await get_verified_vendors(category="food")
-            if not vendors_res.get("success"):
-                return vendors_res
-            vendors_to_search = vendors_res.get("vendors", [])
-
-        all_matches = []
-        for v in vendors_to_search:
-            v_id = v["vendor_id"]
-            v_name = v.get("name")
-            if not v_name:
-                v_record = _lookup_vendor(v_id)
-                v_name = v_record.get("name", "Unknown Vendor") if v_record else "Unknown Vendor"
-
-            # Skip internal services for menu item searching
-            v_record = _lookup_vendor(v_id)
-            if v_record and v_record.get("vendor_type") == "internal_service":
-                continue
-
-            menu_res = await get_verified_vendors_menu(vendor_id=v_id, query=query)
-            if menu_res.get("success"):
-                for item in menu_res.get("items", []):
-                    item["vendor_id"] = v_id
-                    item["vendor_name"] = v_name
-                    all_matches.append(item)
-
-        return {
-            "success": True,
-            "query": query,
-            "total_matches": len(all_matches),
-            "items": all_matches
-        }
+        from tools.search import search as semantic_search
+        res = await semantic_search(query=query, vendor_id=vendor_id)
+        if not res.get("success"):
+            return res
+        items = res.get("menu_items", [])
+        return {"success": True, "query": query, "total_matches": len(items), "items": items}
     except Exception as e:
-        return {"success": False, "error": f"Failed to search food items: {e}"}
+        return {"success": False, "error": f"Semantic search failed: {str(e)}"}
 
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
