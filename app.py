@@ -115,6 +115,7 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
             from fastmcp.server.auth.auth import AccessToken
             print("DEBUG: custom_verify_token SUCCESS", flush=True)
             return AccessToken(
+                token=token,
                 subject="n8n-bot",
                 client_id="n8n",
                 scopes=["openid"],
