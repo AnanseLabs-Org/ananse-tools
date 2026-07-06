@@ -129,6 +129,21 @@ class SSESessionRewriteMiddleware:
             path = scope["path"]
             method = scope["method"]
             
+            # Normalize authorization headers for easy integration
+            headers = dict(scope["headers"])
+            
+            # Convert x-api-key to Authorization: Bearer
+            x_api_key = headers.get(b"x-api-key")
+            if x_api_key:
+                headers[b"authorization"] = b"Bearer " + x_api_key
+                
+            # Ensure Authorization header starts with Bearer
+            auth_header = headers.get(b"authorization")
+            if auth_header and not auth_header.lower().startswith(b"bearer "):
+                headers[b"authorization"] = b"Bearer " + auth_header
+                
+            scope["headers"] = list(headers.items())
+            
             # Normalize openid-configuration to oauth-authorization-server
             if method == "GET":
                 if ".well-known/openid-configuration" in path:
