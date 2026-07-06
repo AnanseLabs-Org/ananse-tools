@@ -3,7 +3,10 @@ from typing import Any, Dict
 from app import mcp
 from integrations.yango.widget import build_ride_widget_link
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Get a Yango booking link for a delivery between two points. The customer opens this link to confirm pickup/dropoff and pricing in the Yango app — pricing and order placement happen on Yango's side, not through this server, until direct API access is enabled.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def get_yango_delivery_link(
     *, pickup_lat: float, pickup_lon: float, dropoff_lat: float, dropoff_lon: float,
 ) -> Dict[str, Any]:

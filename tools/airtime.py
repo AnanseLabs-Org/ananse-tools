@@ -4,14 +4,20 @@ from app import mcp
 from decorators import internal_tool
 from http_client import _call_api
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Get supported networks for airtime top-up.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def airtime_get_networks() -> Dict[str, Any]:
     """
     Get supported networks for airtime top-up.
     """
     return await _call_api( "GET", "/airtime-api/networks")
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Start an airtime purchase using the BulkClix purchase route. :param destination: Recipient phone number receiving the airtime. :param phone_number: MoMo phone number being charged for payment. :param network: Payer network code (e.g., 'MTN', 'VDF', 'ATL'). :param amount: Airtime purchase amount in GHS. :param network_id: Network UUID from airtime_get_networks. :param payment_type: Payment type (usually 'momo').",
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
+)
 async def airtime_purchase(
     *,
     destination: str,

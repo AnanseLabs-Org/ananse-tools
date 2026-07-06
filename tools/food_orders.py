@@ -9,7 +9,10 @@ from tools.sms import sms_send
 from payments.tools import momo_collect
 from vendors.registry import STATIC_VENDORS_LIST
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Search food dishes and restaurants across available catalogs in a specified city (e.g. Accra). Currently searches verified vendors matching categories or name.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def search_food_menus(query: str, city: str = "accra") -> Dict[str, Any]:
     """
     Search food dishes and restaurants across available catalogs in a specified city (e.g. Accra).
@@ -46,7 +49,10 @@ async def search_food_menus(query: str, city: str = "accra") -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to search food menus: {e}"}
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Save or update a customer profile in MongoDB, including delivery address, landmark, and default MoMo payment number.",
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
+)
 async def save_customer_profile(
     customer_name: str,
     phone_number: str,
@@ -82,7 +88,10 @@ async def save_customer_profile(
         return {"success": False, "error": f"Failed to save customer profile: {e}"}
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Retrieve a saved customer profile from MongoDB by phone number to get delivery address and payment preferences.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def get_customer_profile(phone_number: str) -> Dict[str, Any]:
     """
     Retrieve a saved customer profile from MongoDB by phone number to get delivery address and payment preferences.
@@ -106,7 +115,10 @@ class MerchantOrderItem(BaseModel):
     quantity: int = Field(..., description="The quantity of the item to order")
     notes: Optional[str] = Field(None, description="Optional special instructions (e.g. 'no onions')")
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Place a food order directly with a restaurant merchant. Creates an order record in MongoDB, triggers MoMo payment collection from customer, and sends an order SMS dispatch to the merchant.",
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
+)
 async def place_merchant_order(
     *,
     restaurant_phone: str,
@@ -189,7 +201,10 @@ async def place_merchant_order(
         return {"success": False, "error": f"Failed to place merchant order: {e}"}
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Track real-time status and delivery details of an order from MongoDB.",
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
+)
 async def track_order(order_id: str) -> Dict[str, Any]:
     """
     Track real-time status and delivery details of an order from MongoDB.

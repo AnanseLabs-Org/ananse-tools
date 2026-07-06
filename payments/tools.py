@@ -37,7 +37,10 @@ async def momo_collect(
         data["reference"] = reference
     return await _call_api( "POST", "/payment-api/momopay", json_data=data)
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Check the status of a Mobile Money collection or transaction. :param transaction_id: The transaction ID returned during collection. :param payment_id: Optional payment record ID if you already have it.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def momo_check_status(
     *,
     transaction_id: str,
@@ -69,7 +72,10 @@ async def momo_check_status(
     return status_response
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(
+    description="Verify a payment OTP after the customer reads the code from their phone and sends it in chat. CRITICAL: This is ONLY for validating payment-related transactions. The request_id MUST be the one returned in the response of a payment/purchase initiation tool (e.g., airtime_purchase, data_purchase, or momo_collect), NOT from otp_send_sms. Providing a standard SMS OTP request ID will result in a 404 Error. :param code: OTP code entered by the customer from their phone. :param request_id: Request ID returned from the payment/purchase initiation response. :param phone_number: The phone number used for the payment transaction.",
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True)
+)
 async def pay_verify_otp(
     *,
     code: str,

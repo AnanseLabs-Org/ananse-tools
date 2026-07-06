@@ -10,7 +10,10 @@ from vendors.registry import (
 )
 from vendors.menu import _flatten_menu
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="List available vendors to purchase goods from using BulkClix payment. :param vendor_id: Vendor's UUID. If given, returns just that vendor. :param category: Vendor's category of goods (e.g. 'restaurant', 'food', 'airtime'). If given, filters vendors using case-insensitive substring and synonym expansion.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def get_verified_vendors(
     *,
     vendor_id: Any = None,
@@ -47,7 +50,10 @@ async def get_verified_vendors(
     return {"success": True, "vendors": [_public_vendor_view(v) for v in vendors]}
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="List available menu items for a vendor, flattened and checkout-ready — each item has dish_id, name, price, is_available, and addons. No nested categories. :param vendor_id: Vendor's UUID. :param query: Optional case-insensitive substring filter on dish name.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def get_verified_vendors_menu(
     *,
     vendor_id: str,
@@ -98,7 +104,10 @@ class VendorOrderItem(BaseModel):
     quantity: int = Field(..., description="The quantity of the item to order")
     addon_ids: List[int] = Field(default_factory=list, description="List of integer IDs of addons to include")
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Place an order with a food/goods vendor and initiate mobile money payment via BulkClix. :param vendor_id: Vendor's UUID. :param items: List of items to order, with dish_id, quantity, and addon_ids. :param payment_number: Mobile money number to charge (e.g. '0544929180'). :param network: Mobile money network code (e.g. 'MTN'). :param order_type: 'inhouse' or 'delivery' — must be one of the vendor's supported order_types. :param table_number: Table number. Required when order_type is 'inhouse'. :param delivery_address: Delivery address. Required when order_type is 'delivery'.",
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
+)
 async def create_verified_vendors_order(
     *,
     vendor_id: str,
@@ -182,7 +191,10 @@ async def create_verified_vendors_order(
         return {"success": False, "error": f"Unexpected error placing order: {e}"}
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="Search for food items, dishes, pizza, rice, chicken, or menus across all verified vendors or a specific vendor. Use this when asking 'what food is available', 'show me the menu', 'do you have pizza', 'search menu for burger'.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def find_food_items(
     *,
     query: str,
@@ -206,7 +218,10 @@ async def find_food_items(
         return {"success": False, "error": f"Semantic search failed: {str(e)}"}
 
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(
+    description="List all categories of goods (e.g. 'restaurant', 'food', 'airtime', 'data') supported by the verified vendors.",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
 async def list_vendor_categories() -> Dict[str, Any]:
     """
     List all categories of goods (e.g. 'restaurant', 'food', 'airtime', 'data') supported by the verified vendors.
