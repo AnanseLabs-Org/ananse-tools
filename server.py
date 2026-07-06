@@ -11,6 +11,7 @@ from app import mcp
 
 # Import tools for their registration side-effects
 from tools import sms as _sms  # noqa: F401
+from tools import openwa as _openwa  # noqa: F401
 from tools import otp as _otp  # noqa: F401
 from tools import airtime as _airtime  # noqa: F401
 from tools import bank as _bank  # noqa: F401

@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "pattern": "/api/messages.*",
+      "type": "public"
+    },
+    {
+      "pattern": "/api/chats.*",
+      "type": "public"
+    },
+    {
+      "pattern": "/api/contacts.*",
+      "type": "public"
+    },
+    {
+      "pattern": "/api/sessions/status",
+      "type": "public"
+    },
+    {
+      "pattern": "/api/sessions.*",
+      "type": "internal"
+    }
+  ]
+}

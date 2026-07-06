@@ -82,6 +82,7 @@ class MongoKeyValue:
         result = await col.delete_many({"_id": {"$in": list(keys)}})
         return result.deleted_count
 
+auth_provider = None
 if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
     auth0_domain = os.environ.get("AUTH0_DOMAIN")
     auth0_client_id = os.environ.get("AUTH0_CLIENT_ID")
