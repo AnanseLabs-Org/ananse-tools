@@ -102,6 +102,22 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
         client_storage=MongoKeyValue(),
     )
 
+    original_verify = auth_provider.verify_token
+
+    async def custom_verify_token(token: str):
+        static_token = os.environ.get("MCP_STATIC_TOKEN")
+        if static_token and token == static_token:
+            from fastmcp.server.auth.auth import AccessToken
+            return AccessToken(
+                subject="n8n-bot",
+                client_id="n8n",
+                scopes=["openid"],
+                claims={"scope": "openid"}
+            )
+        return await original_verify(token)
+
+    auth_provider.verify_token = custom_verify_token
+
 mcp = FastMCP("ananse-mcp", auth=auth_provider)
 
 class SSESessionRewriteMiddleware:
