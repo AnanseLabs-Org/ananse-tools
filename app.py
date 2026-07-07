@@ -289,9 +289,6 @@ else:
     FastMCP.http_app = get_custom_http_app
 
 
-FastMCP.http_app = property(get_custom_http_app)
-
-
 # ── Diagnostic tool: inspect the current auth token ─────────────────────────
 @mcp.tool(
     description="Returns information about the Auth0 token.",
