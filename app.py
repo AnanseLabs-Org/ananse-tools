@@ -1,16 +1,26 @@
 import os
+from typing import Any, Mapping, Sequence
+
 import jwt as pyjwt
 import fastmcp
 from fastmcp import FastMCP
+from fastmcp.server import create_proxy
+from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.auth.providers.auth0 import Auth0Provider
-from typing import Any, Mapping, Sequence
+from fastmcp.server.dependencies import get_access_token
+from mcp.types import ToolAnnotations
+from starlette.responses import PlainTextResponse, Response
+from starlette.routing import Route
+
 from db import _get_db
 from middleware import AdminTagMiddleware
 
-# Configure settings globally
+# ── Global fastmcp settings ─────────────────────────────────────────────────
 fastmcp.settings.sse_path = "/"
 fastmcp.settings.message_path = "/messages/"
 
+
+# ── Mongo-backed key/value store (used for Auth0 client storage) ───────────
 class MongoKeyValue:
     def __init__(self, default_collection: str = "oauth_store"):
         self.default_collection = default_collection
@@ -51,29 +61,23 @@ class MongoKeyValue:
         cursor = col.find({"_id": {"$in": list(keys)}})
         docs = await cursor.to_list(length=len(keys))
         docs_map = {doc["_id"]: doc for doc in docs}
-        results = []
-        for k in keys:
-            doc = docs_map.get(k)
-            if doc:
-                val = dict(doc)
-                val.pop("_id", None)
-                results.append(val)
-            else:
-                results.append(None)
-        return results
+        return [
+            ({**doc, **{}} if (doc := docs_map.get(k)) is None else {k2: v for k2, v in doc.items() if k2 != "_id"})
+            for k in keys
+        ]
 
     async def ttl_many(self, keys: Sequence[str], *, collection: str | None = None) -> list[tuple[dict[str, Any] | None, float | None]]:
         vals = await self.get_many(keys, collection=collection)
         return [(val, None) for val in vals]
 
     async def put_many(self, keys: Sequence[str], values: Sequence[Mapping[str, Any]], *, collection: str | None = None, ttl: Any = None) -> None:
+        from pymongo import ReplaceOne  # deferred: only needed for bulk writes
+
         col = self._get_collection(collection)
-        from pymongo import ReplaceOne
-        operations = []
-        for k, v in zip(keys, values):
-            data = dict(v)
-            data["_id"] = k
-            operations.append(ReplaceOne({"_id": k}, data, upsert=True))
+        operations = [
+            ReplaceOne({"_id": k}, {**v, "_id": k}, upsert=True)
+            for k, v in zip(keys, values)
+        ]
         if operations:
             await col.bulk_write(operations)
 
@@ -82,8 +86,14 @@ class MongoKeyValue:
         result = await col.delete_many({"_id": {"$in": list(keys)}})
         return result.deleted_count
 
-auth_provider = None
-if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
+
+# ── Auth0 provider (optional, enabled via env var) ──────────────────────────
+def _build_auth_provider() -> Auth0Provider | None:
+    """Constructs the Auth0Provider with a custom token-verification path
+    that supports static/legacy tokens alongside normal Auth0 tokens."""
+    if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() != "true":
+        return None
+
     auth0_domain = os.environ.get("AUTH0_DOMAIN")
     auth0_client_id = os.environ.get("AUTH0_CLIENT_ID")
     auth0_client_secret = os.environ.get("AUTH0_CLIENT_SECRET")
@@ -93,7 +103,7 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
     if not all([auth0_domain, auth0_client_id, auth0_client_secret, auth0_audience, public_url]):
         raise RuntimeError("Missing required Auth0 or public URL configurations in environment")
 
-    auth_provider = Auth0Provider(
+    provider = Auth0Provider(
         config_url=f"https://{auth0_domain}/.well-known/openid-configuration",
         client_id=auth0_client_id,
         client_secret=auth0_client_secret,
@@ -102,56 +112,62 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
         client_storage=MongoKeyValue(),
     )
 
-    original_verify = auth_provider.verify_token
+    original_verify = provider.verify_token
 
     async def custom_verify_token(token: str):
-        clean_token = token
-        if token.lower().startswith("bearer "):
-            clean_token = token[7:]
-            
+        clean_token = token[7:] if token.lower().startswith("bearer ") else token
+
+        # 1. Try a locally-signed static token (HS256)
         static_secret = os.environ.get("MCP_STATIC_TOKEN_SECRET")
         if static_secret:
             try:
                 payload = pyjwt.decode(clean_token, static_secret, algorithms=["HS256"])
-                from fastmcp.server.auth.auth import AccessToken
                 return AccessToken(
                     token=token,
                     subject=payload.get("sub", "static-user"),
                     client_id=payload.get("client_id", "static"),
                     scopes=payload.get("scopes", ["openid"]),
-                    claims=payload
+                    claims=payload,
                 )
             except pyjwt.PyJWTError:
                 pass
 
-        # Fallback to checking the legacy static token in case it's still used
+        # 2. Fall back to a legacy static token (exact match, admin role)
         static_token = os.environ.get("MCP_STATIC_TOKEN")
         if static_token and clean_token == static_token:
-            from fastmcp.server.auth.auth import AccessToken
             return AccessToken(
                 token=token,
                 subject="n8n-bot",
                 client_id="n8n",
                 scopes=["openid"],
-                claims={"scope": "openid", "roles": ["admin"]} # Legacy fallback gets admin role
+                claims={"scope": "openid", "roles": ["admin"]},  # Legacy fallback gets admin role
             )
 
+        # 3. Fall back to normal Auth0 verification
         return await original_verify(token)
 
-    auth_provider.verify_token = custom_verify_token
+    provider.verify_token = custom_verify_token
+    return provider
 
-# ── FastMCP Sub-Servers ──────────────────────────────────────────────────────
+
+auth_provider = _build_auth_provider()
+
+
+# ── FastMCP sub-servers ──────────────────────────────────────────────────────
 general = FastMCP("general")
 cybops = FastMCP("cybops")
 
-# ── Root FastMCP Server ──────────────────────────────────────────────────────
+# ── Root FastMCP server ──────────────────────────────────────────────────────
 mcp = FastMCP(
     "ananse-mcp",
-    instructions="This server provides tools for SMS, Airtime/Data purchases, Food Orders, KYC, OTP verification, and Contacts management.",
-    auth=auth_provider
+    instructions=(
+        "This server provides tools for SMS, Airtime/Data purchases, "
+        "Food Orders, KYC, OTP verification, and Contacts management."
+    ),
+    auth=auth_provider,
 )
 
-# Add AdminTagMiddleware to enforce {'admin'} tags using JWT claims
+# Enforce {'admin'} tags using JWT claims
 mcp.add_middleware(AdminTagMiddleware())
 
 # Mount general tools under "general" namespace
@@ -161,16 +177,16 @@ mcp.mount(general, namespace="general")
 mcp.mount(cybops, namespace="cybops")
 
 # Mount remote Kali FastMCP server under "cybops" namespace via proxy
-from fastmcp.server import create_proxy
 kali_server_url = os.environ.get("KALI_SERVER_URL", "http://kali-server:8001/mcp")
-kali_proxy = create_proxy(
-    kali_server_url,
-    name="kali-server"
-)
+kali_proxy = create_proxy(kali_server_url, name="kali-server")
 mcp.mount(kali_proxy, namespace="cybops")
 
-# ── Starlette Middleware / SSE Session Rewrite ──────────────────────────────────
+
+# ── Starlette middleware: header normalization + SSE session path rewrite ──
 class SSESessionRewriteMiddleware:
+    """Normalizes auth headers and rewrites a couple of well-known paths so
+    that SSE clients and OAuth discovery both hit the right routes."""
+
     def __init__(self, app):
         self.app = app
 
@@ -178,79 +194,91 @@ class SSESessionRewriteMiddleware:
         if scope["type"] == "http":
             path = scope["path"]
             method = scope["method"]
-            
-            # Normalize authorization headers for easy integration
             headers = dict(scope["headers"])
-            
+
             # Convert x-api-key to Authorization: Bearer
             x_api_key = headers.get(b"x-api-key")
             if x_api_key:
                 headers[b"authorization"] = b"Bearer " + x_api_key
-                
+
             # Ensure Authorization header starts with Bearer
             auth_header = headers.get(b"authorization")
             if auth_header and not auth_header.lower().startswith(b"bearer "):
                 headers[b"authorization"] = b"Bearer " + auth_header
-                
+
             scope["headers"] = list(headers.items())
-            
-            # Normalize openid-configuration to oauth-authorization-server
+
             if method == "GET":
+                # Normalize openid-configuration to oauth-authorization-server
                 if ".well-known/openid-configuration" in path:
                     scope["path"] = "/.well-known/oauth-authorization-server"
+
             elif method == "POST":
                 if path == "/":
                     scope["path"] = "/messages/"
                 if "messages" in path:
-                    # Log request details for debugging
-                    headers_dict = {k.decode('utf-8', errors='ignore'): v.decode('utf-8', errors='ignore') for k, v in scope.get("headers", [])}
-                    print(f"DEBUG_POST: path={path} query_string={scope.get('query_string', b'').decode('utf-8')} headers={headers_dict}", flush=True)
-                    
+                    headers_dict = {
+                        k.decode("utf-8", errors="ignore"): v.decode("utf-8", errors="ignore")
+                        for k, v in scope.get("headers", [])
+                    }
+                    print(
+                        f"DEBUG_POST: path={path} "
+                        f"query_string={scope.get('query_string', b'').decode('utf-8')} "
+                        f"headers={headers_dict}",
+                        flush=True,
+                    )
+
         await self.app(scope, receive, send)
 
     def __getattr__(self, name):
         return getattr(self.app, name)
 
-from fastmcp import FastMCP
 
+# ── http_app patch: add OpenAI Apps challenge route + SSE rewrite ──────────
 # Save original property getter to prevent infinite recursion
 original_fget = FastMCP.http_app.fget
 
-def get_custom_http_app(self):
-    # Call the original property getter
-    app = original_fget(self)
-    
-    # Add openai-apps-challenge verification endpoint if not already added
-    has_challenge = any(getattr(r, "path", None) == "/.well-known/openai-apps-challenge" for r in app.routes)
-    if not has_challenge:
-        from starlette.responses import PlainTextResponse
-        from starlette.routing import Route
 
-        async def challenge_endpoint(request):
-            token = os.environ.get("OPENAI_APPS_CHALLENGE_TOKEN")
-            if not token:
-                from starlette.responses import Response
-                return Response("Challenge token not configured in environment", status_code=500, media_type="text/plain")
-            return PlainTextResponse(token)
-
-        app.routes.append(
-            Route("/.well-known/openai-apps-challenge", endpoint=challenge_endpoint, methods=["GET"])
+def _challenge_endpoint(request):
+    """Serves the OpenAI Apps ownership-verification token."""
+    token = os.environ.get("OPENAI_APPS_CHALLENGE_TOKEN")
+    if not token:
+        return Response(
+            "Challenge token not configured in environment",
+            status_code=500,
+            media_type="text/plain",
         )
-        
+    return PlainTextResponse(token)
+
+
+def _with_challenge_route(app):
+    """Adds the challenge route to a Starlette app if it isn't already present."""
+    has_challenge = any(
+        getattr(route, "path", None) == "/.well-known/openai-apps-challenge"
+        for route in app.routes
+    )
+    if not has_challenge:
+        app.routes.append(
+            Route("/.well-known/openai-apps-challenge", endpoint=_challenge_endpoint, methods=["GET"])
+        )
+    return app
+
+
+def get_custom_http_app(self):
+    app = original_fget(self)
+    app = _with_challenge_route(app)
     return SSESessionRewriteMiddleware(app)
+
 
 FastMCP.http_app = property(get_custom_http_app)
 
-# Add a protected tool to test authentication
-from mcp.types import ToolAnnotations
 
+# ── Diagnostic tool: inspect the current auth token ─────────────────────────
 @mcp.tool(
     description="Returns information about the Auth0 token.",
-    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True),
 )
 async def get_token_info() -> dict:
-    from fastmcp.server.dependencies import get_access_token
-
     token = get_access_token()
 
     if not token:
@@ -261,5 +289,5 @@ async def get_token_info() -> dict:
         "audience": token.claims.get("aud") if token.claims else None,
         "scope": token.claims.get("scope") if token.claims else None,
         "subject": token.subject,
-        "client_id": token.client_id
+        "client_id": token.client_id,
     }
