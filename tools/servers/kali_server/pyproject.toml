@@ -15,6 +15,6 @@ dependencies = [
 # Runs the FastMCP API server inside the kali-server container.
 kali-server-mcp = "kali_server.server:main"
 
-[tool.setuptools.packages.find]
-where = [".."]
-include = ["kali_server*"]
+[tool.setuptools]
+packages = ["kali_server"]
+package-dir = {"kali_server" = "."}
