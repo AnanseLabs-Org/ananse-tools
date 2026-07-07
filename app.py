@@ -3,6 +3,7 @@ from typing import Any, Mapping, Sequence
 
 import jwt as pyjwt
 import fastmcp
+import inspect
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
 from fastmcp.server.auth.auth import AccessToken
@@ -237,7 +238,7 @@ class SSESessionRewriteMiddleware:
 # ── http_app patch: add OpenAI Apps challenge route + SSE rewrite ──────────
 # `http_app` is a property in some fastmcp versions and a plain method in
 # others — detect which one we have and wrap accordingly.
-_http_app_attr = FastMCP.__dict__.get("http_app")
+_http_app_attr = inspect.getattr_static(FastMCP, "http_app")
 
 
 def _challenge_endpoint(request):
