@@ -1,9 +1,10 @@
 from typing import Any, Dict
-from decorators import internal_tool
+from mcp.types import ToolAnnotations
+from app import mcp
 from shodan import APIError
 from tools.shodan.utils import _get_client
 
-@internal_tool(read_only=False, destructive=False, open_world=True)
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def shodan_create_alert(
     *,
     name: str,
@@ -23,7 +24,7 @@ async def shodan_create_alert(
     except APIError as e:
         return {"error": str(e)}
 
-@internal_tool(read_only=True, destructive=False, open_world=True)
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_alerts(
     *,
     aid: str = None,
@@ -43,7 +44,7 @@ async def shodan_alerts(
     except APIError as e:
         return {"error": str(e)}
 
-@internal_tool(read_only=False, destructive=True, open_world=True)
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def shodan_delete_alert(
     *,
     aid: str
