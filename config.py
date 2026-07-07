@@ -19,10 +19,4 @@ def _load_env_file(path: str = ".env") -> None:
 _load_env_file()
 
 BASE_URL = "https://api.bulkclix.com/api/v1"
-ENABLE_INTERNAL_TOOLS = os.environ.get("BULKCLIX_ENABLE_INTERNAL_TOOLS", "false").lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017/ananse_db")

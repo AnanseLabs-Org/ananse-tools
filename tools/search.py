@@ -135,7 +135,7 @@ async def rebuild_semantic_index() -> int:
     return len(new_index)
 
 from mcp.types import ToolAnnotations
-from app import mcp
+from app import general as mcp
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def search(

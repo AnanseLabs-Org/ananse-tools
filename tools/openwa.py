@@ -4,7 +4,7 @@ import json
 import logging
 import httpx
 from fastmcp import FastMCP
-from app import mcp
+from app import general as mcp
 
 logger = logging.getLogger("mcp-openwa")
 

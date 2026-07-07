@@ -1,6 +1,6 @@
 from mcp.types import ToolAnnotations
 from typing import Any, Dict
-from app import mcp
+from app import general as mcp
 from integrations.yango.widget import build_ride_widget_link
 
 @mcp.tool(

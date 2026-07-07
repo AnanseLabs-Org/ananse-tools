@@ -1,15 +1,15 @@
 import os
-import config
+import jwt as pyjwt
 import fastmcp
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.auth0 import Auth0Provider
+from typing import Any, Mapping, Sequence
+from db import _get_db
+from middleware import AdminTagMiddleware
 
 # Configure settings globally
 fastmcp.settings.sse_path = "/"
 fastmcp.settings.message_path = "/messages/"
-
-from typing import Any, Mapping, Sequence
-from db import _get_db
 
 class MongoKeyValue:
     def __init__(self, default_collection: str = "oauth_store"):
@@ -105,11 +105,27 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
     original_verify = auth_provider.verify_token
 
     async def custom_verify_token(token: str):
-        static_token = os.environ.get("MCP_STATIC_TOKEN")
         clean_token = token
         if token.lower().startswith("bearer "):
             clean_token = token[7:]
             
+        static_secret = os.environ.get("MCP_STATIC_TOKEN_SECRET")
+        if static_secret:
+            try:
+                payload = pyjwt.decode(clean_token, static_secret, algorithms=["HS256"])
+                from fastmcp.server.auth.auth import AccessToken
+                return AccessToken(
+                    token=token,
+                    subject=payload.get("sub", "static-user"),
+                    client_id=payload.get("client_id", "static"),
+                    scopes=payload.get("scopes", ["openid"]),
+                    claims=payload
+                )
+            except pyjwt.PyJWTError:
+                pass
+
+        # Fallback to checking the legacy static token in case it's still used
+        static_token = os.environ.get("MCP_STATIC_TOKEN")
         if static_token and clean_token == static_token:
             from fastmcp.server.auth.auth import AccessToken
             return AccessToken(
@@ -117,18 +133,43 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
                 subject="n8n-bot",
                 client_id="n8n",
                 scopes=["openid"],
-                claims={"scope": "openid"}
+                claims={"scope": "openid", "roles": ["admin"]} # Legacy fallback gets admin role
             )
+
         return await original_verify(token)
 
     auth_provider.verify_token = custom_verify_token
 
+# ── FastMCP Sub-Servers ──────────────────────────────────────────────────────
+general = FastMCP("general")
+cybops = FastMCP("cybops")
+
+# ── Root FastMCP Server ──────────────────────────────────────────────────────
 mcp = FastMCP(
     "ananse-mcp",
     instructions="This server provides tools for SMS, Airtime/Data purchases, Food Orders, KYC, OTP verification, and Contacts management.",
     auth=auth_provider
 )
 
+# Add AdminTagMiddleware to enforce {'admin'} tags using JWT claims
+mcp.add_middleware(AdminTagMiddleware())
+
+# Mount general tools under "general" namespace
+mcp.mount(general, namespace="general")
+
+# Mount shodan tools under "cybops" namespace
+mcp.mount(cybops, namespace="cybops")
+
+# Mount remote Kali FastMCP server under "cybops" namespace via proxy
+from fastmcp.server import create_proxy
+kali_server_url = os.environ.get("KALI_SERVER_URL", "http://kali-server:8001/mcp")
+kali_proxy = create_proxy(
+    kali_server_url,
+    name="kali-server"
+)
+mcp.mount(kali_proxy, namespace="cybops")
+
+# ── Starlette Middleware / SSE Session Rewrite ──────────────────────────────────
 class SSESessionRewriteMiddleware:
     def __init__(self, app):
         self.app = app

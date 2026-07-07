@@ -2,8 +2,7 @@ from mcp.types import ToolAnnotations
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
-from app import mcp
-from decorators import internal_tool
+from app import general as mcp
 from db import _get_db
 from tools.sms import sms_send
 from payments.tools import momo_collect
@@ -220,7 +219,7 @@ async def track_order(order_id: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to track order: {e}"}
 
 
-@internal_tool(read_only=False, destructive=False, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def update_order_status(order_id: str, status: str) -> Dict[str, Any]:
     """
     [Internal Tool] Update the delivery lifecycle status of an order (e.g. CONFIRMED, IN_TRANSIT, DELIVERED).

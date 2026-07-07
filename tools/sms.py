@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
-from app import mcp
-from decorators import internal_tool
+from mcp.types import ToolAnnotations
+from app import general as mcp
 from http_client import _call_api
 
 def _extract_sender_records(payload: Any) -> list[Any]:
@@ -15,21 +15,16 @@ def _extract_sender_records(payload: Any) -> list[Any]:
         return [payload]
     return []
 
-
 def _extract_sender_id(record: Any) -> str | None:
-    """Return the first sender ID-like field from a sender record."""
+    """Return the sender ID name string from a sender ID record."""
     if isinstance(record, str):
-        cleaned = record.strip()
-        return cleaned or None
+        return record
     if isinstance(record, dict):
-        for key in ("sender_id", "senderId", "id", "uuid", "value", "name"):
-            value = record.get(key)
-            if isinstance(value, str):
-                cleaned = value.strip()
-                if cleaned:
-                    return cleaned
+        for key in ("name", "sender_id", "senderId", "sender"):
+            val = record.get(key)
+            if isinstance(val, str):
+                return val
     return None
-
 
 async def _get_default_sender_id() -> str:
     """Fetch the first available sender ID from the BulkClix account."""
@@ -41,7 +36,7 @@ async def _get_default_sender_id() -> str:
     raise RuntimeError("No sender ID is configured on the BulkClix account.")
 
 
-@internal_tool(read_only=False, destructive=False, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def sms_send(
     *,
     message: str,
@@ -63,7 +58,7 @@ async def sms_send(
         }
     )
 
-@internal_tool(read_only=True, destructive=False, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def sms_get_campaign_report(
     *,
     campaign_id: str
@@ -72,16 +67,16 @@ async def sms_get_campaign_report(
     Get the delivery report for a specific SMS campaign.
     :param campaign_id: The campaign ID returned from sms_send.
     """
-    return await _call_api( "GET", f"/sms-api/campaignMessages/{campaign_id}")
+    return await _call_api("GET", f"/sms-api/campaignMessages/{campaign_id}")
 
-@internal_tool(read_only=True, destructive=False, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def senderid_list() -> Dict[str, Any]:
     """
     List all SMS Sender IDs registered on your BulkClix account along with their status.
     """
-    return await _call_api( "GET", "/sms-api/senderIds")
+    return await _call_api("GET", "/sms-api/senderIds")
 
-@internal_tool(read_only=False, destructive=False, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def senderid_request(
     *,
     name: str,

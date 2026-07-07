@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "kali-server-mcp"
+version = "1.0.0"
+description = "Kali Linux Computer Server for the AnanseLabs tool stack"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=3.0.0",
+]
+
+[project.scripts]
+# Runs the FastMCP API server inside the kali-server container.
+kali-server-mcp = "kali_server.server:main"
+
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["kali_server*"]

@@ -1,7 +1,6 @@
 from mcp.types import ToolAnnotations
 from typing import Any, Dict
-from app import mcp
-from decorators import internal_tool
+from app import general as mcp
 from http_client import _call_api
 
 @mcp.tool(
@@ -62,7 +61,7 @@ async def airtime_purchase(
         json_data=payload,
     )
 
-@internal_tool(read_only=False, destructive=False, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def airtime_send(
     *,
     phone_number: str,

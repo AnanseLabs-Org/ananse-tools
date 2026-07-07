@@ -1,9 +1,9 @@
 from typing import Any, Dict, Optional
-from app import mcp
-from decorators import internal_tool
+from mcp.types import ToolAnnotations
+from app import general as mcp
 from http_client import _call_api
 
-@internal_tool(read_only=False, destructive=True, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def bank_transfer_send(
     *,
     amount: float,
@@ -28,11 +28,11 @@ async def bank_transfer_send(
         data["narration"] = narration
     if callback_url:
         data["callback_url"] = callback_url
-    return await _call_api( "POST", "/payment-api/bank-transfer", json_data=data)
+    return await _call_api("POST", "/payment-api/bank-transfer", json_data=data)
 
-@internal_tool(read_only=True, destructive=False, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def bank_list() -> Dict[str, Any]:
     """
     List all supported banks and their bank codes.
     """
-    return await _call_api( "GET", "/payment-api/banks")
+    return await _call_api("GET", "/payment-api/banks")

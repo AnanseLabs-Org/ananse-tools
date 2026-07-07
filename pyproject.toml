@@ -12,7 +12,10 @@ dependencies = [
     "pymongo>=4.6.0",
     "motor>=3.3.0",
     "shodan>=1.31.0",
+    "pyjwt>=2.0",
 ]
 
 [project.scripts]
 ananse-mcp = "server:main"
+# CLI client for the Kali Computer Server — health checks and manual testing.
+mcp-server = "tools.cybops.kali:_cli_main"

@@ -1,12 +1,11 @@
 from mcp.types import ToolAnnotations
 from typing import Any, Dict, Optional
-from app import mcp
-from decorators import internal_tool
+from app import general as mcp
 from http_client import _call_api
 from auth import _get_payment_bearer_token
 from payments.helpers import _fetch_payment_history, _find_payment_history_match, _is_not_found_response, _payment_status_from_record
 
-@internal_tool(read_only=False, destructive=True, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def momo_collect(
     *,
     amount: float,
@@ -108,7 +107,7 @@ async def pay_verify_otp(
     )
 
 
-@internal_tool(read_only=False, destructive=True, open_world=True)
+@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def momo_disburse(
     *,
     amount: float,

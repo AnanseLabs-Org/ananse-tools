@@ -11,7 +11,6 @@ services:
       - MCP_PORT=8000
       - MONGO_URI=mongodb://mongodb:27017/ananse_db
       - BULKCLIX_API_KEY=${BULKCLIX_API_KEY:-}
-      - BULKCLIX_ENABLE_INTERNAL_TOOLS=${BULKCLIX_ENABLE_INTERNAL_TOOLS:-false}
       - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
       - MCP_ENABLE_OAUTH=${MCP_ENABLE_OAUTH:-false}
       - MCP_PUBLIC_URL=${MCP_PUBLIC_URL:-https://tools.ananselabs.org}
@@ -22,12 +21,36 @@ services:
       - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET:-}
       - OPENAI_APPS_CHALLENGE_TOKEN=${OPENAI_APPS_CHALLENGE_TOKEN:-}
       - MCP_STATIC_TOKEN=${MCP_STATIC_TOKEN:-}
+      - MCP_STATIC_TOKEN_SECRET=${MCP_STATIC_TOKEN_SECRET:-}
       - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://ollama:11434}
+      # Kali computer server — resolved via Docker service name on tools-network
+      - KALI_SERVER_URL=${KALI_SERVER_URL:-http://kali-server:8001/mcp}
+      - KALI_TIMEOUT=${KALI_TIMEOUT:-300}
     depends_on:
       - mongodb
+      - kali-server
     networks:
       - default
     restart: unless-stopped
+
+  # ===== Kali Computer Server =====
+  # Runs the kali-server-mcp FastMCP API inside a Kali Linux container.
+  # The mcp-server calls this over the internal tools-network; the port is
+  # NOT published to the host for security.
+  kali-server:
+    container_name: hst-ananselabs-tools-kali
+    build:
+      context: ./tools/servers/kali_server
+      dockerfile: Dockerfile
+    expose:
+      - "8001"
+    networks:
+      - default
+    restart: unless-stopped
+    # Optional: pass SHODAN_API_KEY through so kali-server can do its own lookups
+    # if needed in future expansions.
+    environment:
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
 
   mongodb:
     container_name: hst-ananselabs-tools-mongodb

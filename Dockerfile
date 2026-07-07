@@ -24,6 +24,7 @@ COPY tools/ ./tools/
 COPY vendors/ ./vendors/
 COPY payments/ ./payments/
 COPY integrations/ ./integrations/
+
 RUN chmod +x entrypoint.sh
 
 # Run as non-root.

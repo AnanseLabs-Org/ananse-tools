@@ -1,8 +1,8 @@
 from typing import Any, Dict
 from mcp.types import ToolAnnotations
-from app import mcp
+from app import cybops as mcp
 from shodan import APIError
-from tools.shodan.utils import _get_client
+from tools.cybops.utils import _get_client
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_search(

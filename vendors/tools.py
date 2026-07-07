@@ -1,6 +1,7 @@
+import math
 from mcp.types import ToolAnnotations
 from typing import Any, Dict, List, Optional
-from app import mcp
+from app import general as mcp
 from http_client import _call_vendor_api
 from vendors.registry import (
     STATIC_VENDORS_LIST,
@@ -11,19 +12,23 @@ from vendors.registry import (
 from vendors.menu import _flatten_menu
 
 @mcp.tool(
-    description="List available vendors to purchase goods from using BulkClix payment. :param vendor_id: Vendor's UUID. If given, returns just that vendor. :param category: Vendor's category of goods (e.g. 'restaurant', 'food', 'airtime'). If given, filters vendors using case-insensitive substring and synonym expansion.",
+    description="List available vendors to purchase goods from using BulkClix payment. :param vendor_id: Vendor's UUID. If given, returns just that vendor. :param category: Vendor's category of goods (e.g. 'restaurant', 'food', 'airtime'). If given, filters vendors using case-insensitive substring and synonym expansion. :param page: Page number for pagination (default 1). :param page_size: Page size for pagination (default 10).",
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def get_verified_vendors(
     *,
     vendor_id: Any = None,
     category: Any = None,
+    page: int = 1,
+    page_size: int = 10,
 ) -> Dict[str, Any]:
     """
     List available vendors to purchase goods from using BulkClix payment.
     :param vendor_id: Vendor's UUID. If given, returns just that vendor.
     :param category: Vendor's category of goods (e.g. "restaurant", "food", "airtime").
         If given, filters vendors using case-insensitive substring and synonym expansion.
+    :param page: Page number for pagination (default 1).
+    :param page_size: Page size for pagination (default 10).
     """
     if not isinstance(vendor_id, str):
         vendor_id = None
@@ -47,23 +52,41 @@ async def get_verified_vendors(
             )
         ]
 
-    return {"success": True, "vendors": [_public_vendor_view(v) for v in vendors]}
+    total = len(vendors)
+    start = (page - 1) * page_size
+    paginated = vendors[start : start + page_size]
+
+    return {
+        "success": True,
+        "vendors": [_public_vendor_view(v) for v in paginated],
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": math.ceil(total / page_size),
+            "has_next": start + page_size < total,
+        }
+    }
 
 
 @mcp.tool(
-    description="List available menu items for a vendor, flattened and checkout-ready — each item has dish_id, name, price, is_available, and addons. No nested categories. :param vendor_id: Vendor's UUID. :param query: Optional case-insensitive substring filter on dish name.",
+    description="List available menu items for a vendor, flattened and checkout-ready — each item has dish_id, name, price, is_available, and addons. No nested categories. :param vendor_id: Vendor's UUID. :param query: Optional case-insensitive substring filter on dish name. :param page: Page number for pagination (default 1). :param page_size: Page size for pagination (default 10).",
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def get_verified_vendors_menu(
     *,
     vendor_id: str,
     query: Any = None,
+    page: int = 1,
+    page_size: int = 10,
 ) -> Dict[str, Any]:
     """
     List available menu items for a vendor, flattened and checkout-ready —
     each item has dish_id, name, price, is_available, and addons. No nested categories.
     :param vendor_id: Vendor's UUID.
     :param query: Optional case-insensitive substring filter on dish name.
+    :param page: Page number for pagination (default 1).
+    :param page_size: Page size for pagination (default 10).
     """
     if not isinstance(query, str):
         query = None
@@ -94,7 +117,21 @@ async def get_verified_vendors_menu(
         q = query.lower()
         items = [i for i in items if q in (i["name"] or "").lower()]
 
-    return {"success": True, "items": items}
+    total = len(items)
+    start = (page - 1) * page_size
+    paginated = items[start : start + page_size]
+
+    return {
+        "success": True,
+        "items": paginated,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": math.ceil(total / page_size),
+            "has_next": start + page_size < total,
+        }
+    }
 
 
 from pydantic import BaseModel, Field
@@ -175,7 +212,8 @@ async def create_verified_vendors_order(
         if order_type == "delivery" and not delivery_address:
             return {"success": False, "error": "delivery_address is required for delivery orders"}
 
-        menu_result = await get_verified_vendors_menu(vendor_id=vendor_id)
+        # We can pass pagination params to get all items to verify
+        menu_result = await get_verified_vendors_menu(vendor_id=vendor_id, page=1, page_size=1000)
         if not menu_result["success"]:
             return {"success": False, "error": f"Could not verify menu before ordering: {menu_result['error']}"}
 

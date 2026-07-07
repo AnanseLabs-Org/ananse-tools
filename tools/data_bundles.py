@@ -1,6 +1,6 @@
 from mcp.types import ToolAnnotations
 from typing import Any, Dict
-from app import mcp
+from app import general as mcp
 from http_client import _call_api
 from auth import _get_default_customer_name
 from payments.helpers import _fetch_payment_history, _find_payment_history_match, _is_not_found_response, _payment_status_from_record

@@ -1,6 +1,6 @@
 from mcp.types import ToolAnnotations
 from typing import Any, Dict
-from app import mcp
+from app import general as mcp
 from http_client import _call_api
 from tools.sms import _get_default_sender_id
 
