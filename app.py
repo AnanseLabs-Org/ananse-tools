@@ -211,30 +211,32 @@ class SSESessionRewriteMiddleware:
     def __getattr__(self, name):
         return getattr(self.app, name)
 
-original_http_app = mcp.http_app
-def custom_http_app(*args, **kwargs):
-    # Enforce transport="sse" if not specified, since we run on SSE
-    if "transport" not in kwargs:
-        kwargs["transport"] = "sse"
-    app = original_http_app(*args, **kwargs)
-    
-    # Add openai-apps-challenge verification endpoint
-    from starlette.responses import PlainTextResponse
-    from starlette.routing import Route
+from fastmcp import FastMCP
 
-    async def challenge_endpoint(request):
-        token = os.environ.get("OPENAI_APPS_CHALLENGE_TOKEN")
-        if not token:
-            from starlette.responses import Response
-            return Response("Challenge token not configured in environment", status_code=500, media_type="text/plain")
-        return PlainTextResponse(token)
-
-    app.routes.append(
-        Route("/.well-known/openai-apps-challenge", endpoint=challenge_endpoint, methods=["GET"])
-    )
+def get_custom_http_app(self):
+    # Call the original property getter
+    app = FastMCP.http_app.fget(self)
     
+    # Add openai-apps-challenge verification endpoint if not already added
+    has_challenge = any(getattr(r, "path", None) == "/.well-known/openai-apps-challenge" for r in app.routes)
+    if not has_challenge:
+        from starlette.responses import PlainTextResponse
+        from starlette.routing import Route
+
+        async def challenge_endpoint(request):
+            token = os.environ.get("OPENAI_APPS_CHALLENGE_TOKEN")
+            if not token:
+                from starlette.responses import Response
+                return Response("Challenge token not configured in environment", status_code=500, media_type="text/plain")
+            return PlainTextResponse(token)
+
+        app.routes.append(
+            Route("/.well-known/openai-apps-challenge", endpoint=challenge_endpoint, methods=["GET"])
+        )
+        
     return SSESessionRewriteMiddleware(app)
-mcp.http_app = custom_http_app
+
+FastMCP.http_app = property(get_custom_http_app)
 
 # Add a protected tool to test authentication
 from mcp.types import ToolAnnotations
