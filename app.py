@@ -235,8 +235,9 @@ class SSESessionRewriteMiddleware:
 
 
 # ── http_app patch: add OpenAI Apps challenge route + SSE rewrite ──────────
-# Save original property getter to prevent infinite recursion
-original_fget = FastMCP.http_app.fget
+# `http_app` is a property in some fastmcp versions and a plain method in
+# others — detect which one we have and wrap accordingly.
+_http_app_attr = FastMCP.__dict__.get("http_app")
 
 
 def _challenge_endpoint(request):
@@ -264,10 +265,27 @@ def _with_challenge_route(app):
     return app
 
 
-def get_custom_http_app(self):
-    app = original_fget(self)
-    app = _with_challenge_route(app)
-    return SSESessionRewriteMiddleware(app)
+if isinstance(_http_app_attr, property):
+    # Property descriptor case
+    _original_http_app = _http_app_attr.fget
+
+    def get_custom_http_app(self):
+        app = _original_http_app(self)
+        app = _with_challenge_route(app)
+        return SSESessionRewriteMiddleware(app)
+
+    FastMCP.http_app = property(get_custom_http_app)
+
+else:
+    # Plain method case (this is what your installed fastmcp version uses)
+    _original_http_app = _http_app_attr
+
+    def get_custom_http_app(self, *args, **kwargs):
+        app = _original_http_app(self, *args, **kwargs)
+        app = _with_challenge_route(app)
+        return SSESessionRewriteMiddleware(app)
+
+    FastMCP.http_app = get_custom_http_app
 
 
 FastMCP.http_app = property(get_custom_http_app)
