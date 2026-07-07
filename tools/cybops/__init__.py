@@ -20,15 +20,6 @@ from tools.cybops.misc import (
     shodan_myip,
 )
 
-# --- Kali Linux tools ---
-from tools.cybops.kali import (
-    kali_nmap,
-    kali_gobuster,
-    kali_nikto,
-    kali_sqlmap,
-    kali_hydra,
-)
-
 __all__ = [
     # Shodan — DNS
     "shodan_dns_resolve",
@@ -54,10 +45,4 @@ __all__ = [
     "shodan_protocols",
     "shodan_services",
     "shodan_myip",
-    # Kali Linux
-    "kali_nmap",
-    "kali_gobuster",
-    "kali_nikto",
-    "kali_sqlmap",
-    "kali_hydra",
 ]
