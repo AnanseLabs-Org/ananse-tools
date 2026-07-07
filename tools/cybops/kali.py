@@ -53,3 +53,8 @@ def _cli_main() -> None:
 
     log.info("Connecting to Kali server at %s", args.server)
     asyncio.run(_run())
+
+
+if __name__ == "__main__":
+    _cli_main()
+
