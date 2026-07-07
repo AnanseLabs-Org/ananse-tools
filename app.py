@@ -110,10 +110,8 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
         if token.lower().startswith("bearer "):
             clean_token = token[7:]
             
-        print(f"DEBUG: custom_verify_token called with token={token} (clean={clean_token}) (expected={static_token})", flush=True)
         if static_token and clean_token == static_token:
             from fastmcp.server.auth.auth import AccessToken
-            print("DEBUG: custom_verify_token SUCCESS", flush=True)
             return AccessToken(
                 token=token,
                 subject="n8n-bot",
@@ -121,7 +119,6 @@ if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() == "true":
                 scopes=["openid"],
                 claims={"scope": "openid"}
             )
-        print("DEBUG: custom_verify_token DELEGATING TO AUTH0", flush=True)
         return await original_verify(token)
 
     auth_provider.verify_token = custom_verify_token

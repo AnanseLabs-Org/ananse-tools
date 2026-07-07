@@ -30,10 +30,20 @@ certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
+    #   requests
 cffi==2.0.0
     # via cryptography
+charset-normalizer==3.4.8
+    # via requests
 click==8.4.2
-    # via uvicorn
+    # via
+    #   click-plugins
+    #   shodan
+    #   uvicorn
+click-plugins==1.1.1.2
+    # via shodan
+colorama==0.4.6
+    # via shodan
 cryptography==49.0.0
     # via
     #   authlib
@@ -55,6 +65,8 @@ fastmcp==3.4.2
     # via ananse-mcp (pyproject.toml)
 fastmcp-slim==3.4.2
     # via fastmcp
+filelock==3.29.6
+    # via tldextract
 griffelib==2.1.0
     # via fastmcp-slim
 h11==0.16.0
@@ -75,6 +87,8 @@ idna==3.18
     #   anyio
     #   email-validator
     #   httpx
+    #   requests
+    #   tldextract
 jaraco-classes==3.4.0
     # via keyring
 jaraco-context==6.1.2
@@ -162,6 +176,13 @@ referencing==0.37.0
     #   jsonschema
     #   jsonschema-path
     #   jsonschema-specifications
+requests==2.34.2
+    # via
+    #   requests-file
+    #   shodan
+    #   tldextract
+requests-file==3.0.1
+    # via tldextract
 rich==15.0.0
     # via
     #   cyclopts
@@ -173,6 +194,8 @@ rpds-py==2026.5.1
     # via
     #   jsonschema
     #   referencing
+shodan==1.31.0
+    # via ananse-mcp (pyproject.toml)
 sse-starlette==3.4.5
     # via mcp
 starlette==1.3.1
@@ -181,6 +204,8 @@ starlette==1.3.1
     #   fastmcp-slim
     #   mcp
     #   sse-starlette
+tldextract==5.3.1
+    # via shodan
 typing-extensions==4.15.0
     # via
     #   fastmcp-slim
@@ -197,6 +222,8 @@ typing-inspection==0.4.2
     #   pydantic-settings
 uncalled-for==0.3.2
     # via fastmcp-slim
+urllib3==2.7.0
+    # via requests
 uvicorn==0.49.0
     # via
     #   ananse-mcp (pyproject.toml)
@@ -206,3 +233,5 @@ watchfiles==1.2.0
     # via fastmcp-slim
 websockets==16.0
     # via fastmcp-slim
+xlsxwriter==3.2.9
+    # via shodan

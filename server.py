@@ -20,6 +20,7 @@ from tools import kyc as _kyc  # noqa: F401
 from tools import openwa as _openwa  # noqa: F401
 from tools import otp as _otp  # noqa: F401
 from tools import search as _search  # noqa: F401
+from tools import shodan as _shodan  # noqa: F401
 from tools import sms as _sms  # noqa: F401
 
 from payments import tools as _payment_tools  # noqa: F401
