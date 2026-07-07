@@ -198,6 +198,9 @@ class SSESessionRewriteMiddleware:
             if method == "GET":
                 if ".well-known/openid-configuration" in path:
                     scope["path"] = "/.well-known/oauth-authorization-server"
+            elif method == "POST":
+                if path == "/":
+                    scope["path"] = "/messages/"
                     
         await self.app(scope, receive, send)
 
