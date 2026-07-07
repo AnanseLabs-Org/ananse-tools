@@ -213,9 +213,12 @@ class SSESessionRewriteMiddleware:
 
 from fastmcp import FastMCP
 
+# Save original property getter to prevent infinite recursion
+original_fget = FastMCP.http_app.fget
+
 def get_custom_http_app(self):
     # Call the original property getter
-    app = FastMCP.http_app.fget(self)
+    app = original_fget(self)
     
     # Add openai-apps-challenge verification endpoint if not already added
     has_challenge = any(getattr(r, "path", None) == "/.well-known/openai-apps-challenge" for r in app.routes)
