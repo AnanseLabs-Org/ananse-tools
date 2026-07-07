@@ -201,6 +201,10 @@ class SSESessionRewriteMiddleware:
             elif method == "POST":
                 if path == "/":
                     scope["path"] = "/messages/"
+                if "messages" in path:
+                    # Log request details for debugging
+                    headers_dict = {k.decode('utf-8', errors='ignore'): v.decode('utf-8', errors='ignore') for k, v in scope.get("headers", [])}
+                    print(f"DEBUG_POST: path={path} query_string={scope.get('query_string', b'').decode('utf-8')} headers={headers_dict}", flush=True)
                     
         await self.app(scope, receive, send)
 
