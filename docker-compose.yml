@@ -260,13 +260,13 @@ volumes:
     external: true
   openwa-data:
     name: openwa_openwa-data
-    driver: local
+    external: true
   redis-data:
     name: openwa_redis-data
-    driver: local
+    external: true
   ollama-data:
     name: openwa_ollama-data
-    driver: local
+    external: true
 
 networks:
   default:
