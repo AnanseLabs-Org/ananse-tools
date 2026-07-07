@@ -19,7 +19,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py auth.py config.py db.py decorators.py http_client.py server.py entrypoint.sh ./
+COPY app.py auth.py config.py db.py http_client.py middleware.py server.py entrypoint.sh ./
 COPY tools/ ./tools/
 COPY vendors/ ./vendors/
 COPY payments/ ./payments/
