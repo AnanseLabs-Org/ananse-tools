@@ -179,6 +179,9 @@ mcp.mount(cybops, namespace="cybops")
 
 # Mount remote Kali FastMCP server under "cybops" namespace via proxy
 kali_server_url = os.environ.get("KALI_SERVER_URL", "http://kali-server:8001/mcp")
+# Configure proxy client options if needed, but since it is direct HTTP connection on tools-network:
+# We must disable DNS rebinding on the backend (kali-server) so that proxy calls from app.py do not fail with 421.
+# Since we are mounting it, we want the proxy calls to be accepted.
 kali_proxy = create_proxy(kali_server_url, name="kali-server")
 mcp.mount(kali_proxy, namespace="cybops")
 

@@ -25,8 +25,11 @@ log = logging.getLogger(__name__)
 
 fastmcp.settings.sse_path = "/mcp"
 fastmcp.settings.message_path = "/messages/"
+# Disable DNS rebinding checks on local internal container communication to avoid 421 Misdirected Request errors
+from mcp.server.transport_security import TransportSecuritySettings
+transport_sec = TransportSecuritySettings(enable_dns_rebinding_protection=False)
 
-mcp = FastMCP("kali-server")
+mcp = FastMCP("kali-server", transport_security=transport_sec)
 
 def _run(cmd: list[str], timeout: int = 300) -> dict[str, Any]:
     """Execute *cmd* as a subprocess and return a structured result dict."""
