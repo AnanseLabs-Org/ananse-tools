@@ -126,7 +126,7 @@ services:
   # ===== CORE: OpenWA Backend API =====
   openwa-api:
     container_name: hst-ananselabs-tools-openwa
-    image: ghcr.io/rmyndharis/openwa:0.7.7
+    image: ghcr.io/rmyndharis/openwa:0.8.10
     restart: unless-stopped
     networks:
       - openwa-network

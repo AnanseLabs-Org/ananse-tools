@@ -1,0 +1,169 @@
+{
+  "name": "OpenWA Auto-Reconnect & SMS Pairing Code",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Webhook",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        32
+      ],
+      "id": "8c088457-92c3-4d4c-a0bd-c968cdb83c3d"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$json.body.data.status}}",
+        "rules": {
+          "rules": [
+            {
+              "operation": "equal",
+              "value2": "disconnected",
+              "output": 0
+            },
+            {
+              "operation": "equal",
+              "value2": "qr_ready",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "name": "Route by Session Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        32
+      ],
+      "id": "dc9952bf-6e9e-4903-b341-614da0bd374e"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "POST",
+        "url": "={{'http://openwa-api:2785/api/sessions/' + $json.body.sessionId + '/start'}}",
+        "options": {}
+      },
+      "name": "Reconnect Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        50,
+        -100
+      ],
+      "id": "reconnect-session-node-id",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "POST",
+        "url": "={{'http://openwa-api:2785/api/sessions/' + $json.body.sessionId + '/pairing-code'}}",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "phoneNumber",
+              "value": "REPLACE_WITH_YOUR_PHONE_NUMBER"
+            }
+          ]
+        }
+      },
+      "name": "Request Pairing Code",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        50,
+        100
+      ],
+      "id": "787d0729-720b-4ea1-9b12-003d02f11395",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "url": "https://api.bulkclix.com/api/sms/send",
+        "options": {}
+      },
+      "name": "Send SMS via BulkClix",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        250,
+        100
+      ],
+      "id": "45c2f6c6-59ab-4e3f-8b7f-0113f23ba5d1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JOClA1VmR7jCMwvO",
+          "name": "Header Auth BulkClix 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route by Session Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Session Status": {
+      "main": [
+        [
+          {
+            "node": "Reconnect Session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Request Pairing Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Pairing Code": {
+      "main": [
+        [
+          {
+            "node": "Send SMS via BulkClix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "name": "OpenWA Master Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openwa-events",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        112
+      ],
+      "id": "fa81203f-2451-4d98-ad24-39fa74c0e64c",
+      "webhookId": "bf92226b-c035-4249-8c0d-d77c4dc77e82",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$json.body.event}}",
+        "rules": {
+          "rules": [
+            {
+              "operation": "equal",
+              "value2": "session.status",
+              "output": 0
+            },
+            {
+              "operation": "equal",
+              "value2": "message.received",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        112
+      ],
+      "id": "ac8d00be-7adc-4413-9df2-ada2b9f25c19"
+    },
+    {
+      "parameters": {
+        "workflowId": "vGR9rLcFqMm6Pug6",
+        "options": {}
+      },
+      "name": "Trigger Reconnect",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5a05ca9b-a2d7-487e-89c2-f760a5865da0"
+    },
+    {
+      "parameters": {
+        "workflowId": "iPPTbO0rwCuICxjo",
+        "options": {}
+      },
+      "name": "Trigger AI Agent",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        0,
+        208
+      ],
+      "id": "7f3359b9-3c13-4eb7-aa5b-ad216ab663fc"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Trigger Reconnect",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trigger AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5ae22daa-4187-4c59-afa2-fc891bfa1785",
+  "meta": {
+    "instanceId": "b2f956939b829ecd781ac6086c8ae143b4bbfb4eca22502b8b427c7dcde65c2e"
+  },
+  "nodeGroups": [],
+  "id": "dtiCdDHXsEaMpqQf",
+  "tags": []
+}

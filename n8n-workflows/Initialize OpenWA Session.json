@@ -1,0 +1,215 @@
+{
+  "name": "Initialize OpenWA Session",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        320,
+        16
+      ],
+      "id": "b7fbee96-cdfe-47be-a70f-71975190d298"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "POST",
+        "url": "http://openwa-api:2785/api/sessions",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "name",
+              "value": "ananse-whatsapp"
+            }
+          ]
+        }
+      },
+      "name": "Register Session Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        528,
+        16
+      ],
+      "id": "945e483b-7d49-4091-9e60-555fcea2df4d",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "POST",
+        "url": "=http://openwa-api:2785/api/sessions/{{ $json.id }}/webhooks",
+        "jsonParameters": true,
+        "options": {},
+        "bodyJson": "={\n  \"url\": \"https://auto.ananselabs.org/webhook/openwa-events\",\n  \"headers\": {\n    \"X-API-Key\": \"REPLACE_WITH_YOUR_API_MASTER_KEY\"\n  }\n}"
+      },
+      "name": "Set Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        720,
+        16
+      ],
+      "id": "42e859be-ff7d-411a-8bb0-6a52f9b20755",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "POST",
+        "url": "=http://openwa-api:2785/api/sessions/{{ $('Register Session Config').item.json.id }}/start",
+        "options": {}
+      },
+      "name": "Start Session Connection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        920,
+        16
+      ],
+      "id": "cbaadbec-32a5-4c33-bdb5-78969219f883",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "name": "Manual Trigger (Delete All)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        320,
+        200
+      ],
+      "id": "delete-all-manual-trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "GET",
+        "url": "http://openwa-api:2785/api/sessions",
+        "options": {}
+      },
+      "name": "GET Sessions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        528,
+        200
+      ],
+      "id": "get-sessions-cleanup",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "requestMethod": "DELETE",
+        "url": "=http://openwa-api:2785/api/sessions/{{ $json.id }}",
+        "options": {}
+      },
+      "name": "DELETE Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        720,
+        200
+      ],
+      "id": "delete-session-cleanup",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Register Session Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Session Config": {
+      "main": [
+        [
+          {
+            "node": "Set Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Webhook": {
+      "main": [
+        [
+          {
+            "node": "Start Session Connection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger (Delete All)": {
+      "main": [
+        [
+          {
+            "node": "GET Sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Sessions": {
+      "main": [
+        [
+          {
+            "node": "DELETE Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  }
+}
