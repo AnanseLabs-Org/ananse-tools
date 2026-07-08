@@ -153,6 +153,7 @@ services:
     expose:
       - '2785'
     environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-halien.taild02e26.ts.net}
       - NODE_ENV=${NODE_ENV:-production}
       - HOME=/tmp
       - XDG_CONFIG_HOME=/tmp/.config
