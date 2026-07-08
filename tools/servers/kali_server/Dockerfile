@@ -4,6 +4,7 @@ FROM kalilinux/kali-rolling
 # Python3, pip, sudo, and all Kali pentest CLI tools exposed by the server.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-pip python3-setuptools python3-wheel \
+        python3-pydantic python3-yaml python3-dotenv python3-click python3-httpx python3-rich \
         sudo \
         nmap gobuster nikto sqlmap hydra dirb \
     && rm -rf /var/lib/apt/lists/*
