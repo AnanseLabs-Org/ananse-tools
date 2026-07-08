@@ -13,6 +13,7 @@ import argparse
 import logging
 import subprocess
 from typing import Any, Dict
+import fastmcp
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
@@ -21,6 +22,9 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # FastMCP application
 # ---------------------------------------------------------------------------
+
+fastmcp.settings.sse_path = "/mcp"
+fastmcp.settings.message_path = "/messages/"
 
 mcp = FastMCP("kali-server")
 
