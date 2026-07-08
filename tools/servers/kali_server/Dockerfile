@@ -13,7 +13,7 @@ WORKDIR /app
 # Install the kali_server package (server.py + kali-server-mcp entry point).
 # Build context is tools/servers/kali_server/ — everything is copied from there.
 COPY . .
-RUN pip install --no-cache-dir --no-build-isolation --break-system-packages .
+RUN pip install --no-cache-dir --break-system-packages .
 
 # ── Non-root user with passwordless sudo ─────────────────────────────────────
 # nmap needs raw sockets (CAP_NET_RAW) for SYN scans — sudo is the escape hatch.
