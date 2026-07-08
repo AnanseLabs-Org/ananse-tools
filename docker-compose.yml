@@ -26,6 +26,7 @@ services:
       # Kali computer server — resolved via Docker service name on tools-network
       - KALI_SERVER_URL=${KALI_SERVER_URL:-http://kali-server:8001/mcp}
       - KALI_TIMEOUT=${KALI_TIMEOUT:-300}
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
     depends_on:
       - mongodb
       - kali-server
