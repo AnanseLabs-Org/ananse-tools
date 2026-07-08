@@ -151,7 +151,7 @@ services:
     ports:
       - '127.0.0.1:${API_PORT:-2785}:2785'
     expose:
-      - '2785'
+      - '2785:2785'
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - HOME=/tmp
