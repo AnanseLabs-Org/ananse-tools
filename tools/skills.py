@@ -19,7 +19,7 @@ from mcp.types import ToolAnnotations
 
 log = logging.getLogger(__name__)
 
-SKILLS_ROOT = Path("/app/skills")
+SKILLS_ROOT = Path(os.environ.get("SKILLS_DIR", "/app/skills"))
 
 def _validate_skill_name(name: str) -> None:
     """Validate skill name to prevent directory traversal attacks."""

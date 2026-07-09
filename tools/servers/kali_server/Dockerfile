@@ -16,6 +16,9 @@ WORKDIR /app
 COPY . .
 RUN pip install --no-cache-dir --break-system-packages .
 
+# Create the standard wordlist directory structure and symlink to the installed dirb wordlist
+RUN mkdir -p /usr/share/wordlists/dirb && ln -sf /usr/share/dirb/wordlists/common.txt /usr/share/wordlists/dirb/common.txt
+
 # ── Non-root user with passwordless sudo ─────────────────────────────────────
 # nmap needs raw sockets (CAP_NET_RAW) for SYN scans — sudo is the escape hatch.
 RUN useradd -m -u 1000 kaliuser \

@@ -171,7 +171,7 @@ mcp = FastMCP(
     auth=auth_provider,
 )
 
-skills_path = Path("/app/skills")
+skills_path = Path(os.environ.get("SKILLS_DIR", "/app/skills"))
 skills_path.mkdir(parents=True, exist_ok=True)
 mcp.add_provider(SkillsDirectoryProvider(roots=skills_path, reload=True))
 

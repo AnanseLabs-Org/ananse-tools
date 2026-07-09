@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 # FastMCP application
 # ---------------------------------------------------------------------------
 
+import os
 from pathlib import Path
 from fastmcp.server.providers.skills import SkillsDirectoryProvider
 
@@ -33,7 +34,7 @@ fastmcp.settings.http_host_origin_protection = False
 
 mcp = FastMCP("kali-server")
 
-skills_path = Path("/app/skills")
+skills_path = Path(os.environ.get("SKILLS_DIR", "/app/skills"))
 skills_path.mkdir(parents=True, exist_ok=True)
 mcp.add_provider(SkillsDirectoryProvider(roots=skills_path, reload=True))
 
@@ -96,14 +97,12 @@ async def nmap(
     return _run(cmd)
 
 
-# ── gobuster ────────────────────────────────────────────────────────────────
-
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def gobuster(
     *,
     url: str,
     mode: str = "dir",
-    wordlist: str = "/usr/share/dirb/wordlists/common.txt",
+    wordlist: str = "/usr/share/wordlists/dirb/common.txt",
     additional_args: str = "",
 ) -> Dict[str, Any]:
     """
