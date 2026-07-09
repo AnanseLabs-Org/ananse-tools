@@ -22,6 +22,7 @@ from tools import otp as _otp  # noqa: F401
 from tools import search as _search  # noqa: F401
 from tools import cybops as _cybops  # noqa: F401
 from tools import sms as _sms  # noqa: F401
+from tools import skills as _skills  # noqa: F401
 
 from payments import tools as _payment_tools  # noqa: F401
 from vendors import tools as _vendor_tools  # noqa: F401

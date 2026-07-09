@@ -32,6 +32,8 @@ services:
       - kali-server
     networks:
       - default
+    volumes:
+      - ./skills:/app/skills
     restart: unless-stopped
 
   # ===== Kali Computer Server =====
@@ -47,6 +49,8 @@ services:
       - "8001"
     networks:
       - default
+    volumes:
+      - ./skills:/app/skills
     restart: unless-stopped
     # Optional: pass SHODAN_API_KEY through so kali-server can do its own lookups
     # if needed in future expansions.

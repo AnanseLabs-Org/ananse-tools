@@ -154,6 +154,9 @@ def _build_auth_provider() -> Auth0Provider | None:
 auth_provider = _build_auth_provider()
 
 
+from pathlib import Path
+from fastmcp.server.providers.skills import SkillsDirectoryProvider
+
 # ── FastMCP sub-servers ──────────────────────────────────────────────────────
 general = FastMCP("general")
 cybops = FastMCP("cybops")
@@ -167,6 +170,10 @@ mcp = FastMCP(
     ),
     auth=auth_provider,
 )
+
+skills_path = Path("/app/skills")
+skills_path.mkdir(parents=True, exist_ok=True)
+mcp.add_provider(SkillsDirectoryProvider(roots=skills_path, reload=True))
 
 # Enforce {'admin'} tags using JWT claims
 mcp.add_middleware(AdminTagMiddleware())

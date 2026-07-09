@@ -23,12 +23,19 @@ log = logging.getLogger(__name__)
 # FastMCP application
 # ---------------------------------------------------------------------------
 
+from pathlib import Path
+from fastmcp.server.providers.skills import SkillsDirectoryProvider
+
 fastmcp.settings.sse_path = "/mcp"
 fastmcp.settings.message_path = "/messages/"
 # Disable DNS rebinding checks on local internal container communication to avoid 421 Misdirected Request errors
 fastmcp.settings.http_host_origin_protection = False
 
 mcp = FastMCP("kali-server")
+
+skills_path = Path("/app/skills")
+skills_path.mkdir(parents=True, exist_ok=True)
+mcp.add_provider(SkillsDirectoryProvider(roots=skills_path, reload=True))
 
 def _run(cmd: list[str], timeout: int = 300) -> dict[str, Any]:
     """Execute *cmd* as a subprocess and return a structured result dict."""
@@ -96,7 +103,7 @@ async def gobuster(
     *,
     url: str,
     mode: str = "dir",
-    wordlist: str = "/usr/share/wordlists/dirb/common.txt",
+    wordlist: str = "/usr/share/dirb/wordlists/common.txt",
     additional_args: str = "",
 ) -> Dict[str, Any]:
     """
