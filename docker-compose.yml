@@ -33,7 +33,7 @@ services:
     networks:
       - default
     volumes:
-      - ./skills:/app/skills
+      - ${SKILLS_DIR_HOST:-./skills}:${SKILLS_DIR:-/app/skills}
     restart: unless-stopped
 
   # ===== Kali Computer Server =====
@@ -50,7 +50,7 @@ services:
     networks:
       - default
     volumes:
-      - ./skills:/app/skills
+      - ${SKILLS_DIR_HOST:-./skills}:${SKILLS_DIR:-/app/skills}
     restart: unless-stopped
     # Optional: pass SHODAN_API_KEY through so kali-server can do its own lookups
     # if needed in future expansions.
@@ -153,7 +153,7 @@ services:
     pids_limit: 512
     mem_limit: ${OPENWA_MEM_LIMIT:-2g}
     ports:
-      - '${API_PORT:-2785}:2785'
+      - '127.0.0.1:${API_PORT:-2785}:2785'
     expose:
       - '2785'
     environment:
