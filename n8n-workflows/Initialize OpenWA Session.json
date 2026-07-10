@@ -7,10 +7,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        320,
-        16
+        976,
+        208
       ],
-      "id": "b7fbee96-cdfe-47be-a70f-71975190d298"
+      "id": "bdb23c8b-7cd3-4ca3-a572-e793f2eee3ee"
     },
     {
       "parameters": {
@@ -32,10 +32,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        528,
-        16
+        1184,
+        208
       ],
-      "id": "945e483b-7d49-4091-9e60-555fcea2df4d",
+      "id": "4829f7fe-375e-4272-9214-16a1c6a6c260",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -51,16 +51,16 @@
         "url": "=http://openwa-api:2785/api/sessions/{{ $json.id }}/webhooks",
         "jsonParameters": true,
         "options": {},
-        "bodyJson": "={\n  \"url\": \"https://auto.ananselabs.org/webhook/openwa-events\",\n  \"headers\": {\n    \"X-API-Key\": \"REPLACE_WITH_YOUR_API_MASTER_KEY\"\n  }\n}"
+        "bodyParametersJson": "{\n  \"url\": \"https://auto.ananselabs.org/webhook/openwa-events\",\n  \"events\": [\n    \"message.received\",\n    \"session.status\"\n  ]\n}"
       },
       "name": "Set Webhook",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        720,
-        16
+        1376,
+        208
       ],
-      "id": "42e859be-ff7d-411a-8bb0-6a52f9b20755",
+      "id": "6560e06f-0a04-4647-b5ef-f5fd6714e1a0",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -80,10 +80,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        920,
-        16
+        1584,
+        208
       ],
-      "id": "cbaadbec-32a5-4c33-bdb5-78969219f883",
+      "id": "585819c8-c57a-4c18-829f-35100fd4b77b",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -92,21 +92,9 @@
       }
     },
     {
-      "parameters": {},
-      "name": "Manual Trigger (Delete All)",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        320,
-        200
-      ],
-      "id": "delete-all-manual-trigger"
-    },
-    {
       "parameters": {
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "requestMethod": "GET",
         "url": "http://openwa-api:2785/api/sessions",
         "options": {}
       },
@@ -114,10 +102,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        528,
-        200
+        1184,
+        400
       ],
-      "id": "get-sessions-cleanup",
+      "id": "dfd45425-2945-4b5d-a4d8-a9f3bb75787a",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -130,17 +118,17 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "requestMethod": "DELETE",
-        "url": "=http://openwa-api:2785/api/sessions/{{ $json.id }}",
+        "url": "=http://openwa-api:2785/api/sessions/{{ $json[0].id }}",
         "options": {}
       },
       "name": "DELETE Session",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        720,
-        200
+        1376,
+        400
       ],
-      "id": "delete-session-cleanup",
+      "id": "63f77523-8804-4003-9437-5d9b79daf553",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -184,17 +172,6 @@
         ]
       ]
     },
-    "Manual Trigger (Delete All)": {
-      "main": [
-        [
-          {
-            "node": "GET Sessions",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "GET Sessions": {
       "main": [
         [
@@ -207,9 +184,17 @@
       ]
     }
   },
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
-  }
+  },
+  "versionId": "19fb48b0-0a17-40c7-a002-95469820e801",
+  "meta": {
+    "instanceId": "b2f956939b829ecd781ac6086c8ae143b4bbfb4eca22502b8b427c7dcde65c2e"
+  },
+  "nodeGroups": [],
+  "id": "sda4C6vF5opmToDn",
+  "tags": []
 }

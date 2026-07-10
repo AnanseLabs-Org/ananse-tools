@@ -5,7 +5,6 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "openwa-events",
-        "authentication": "headerAuth",
         "options": {}
       },
       "name": "Webhook",
@@ -15,14 +14,8 @@
         -448,
         112
       ],
-      "id": "fa81203f-2451-4d98-ad24-39fa74c0e64c",
-      "webhookId": "bf92226b-c035-4249-8c0d-d77c4dc77e82",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "oAHp8tvD9riiKG8g",
-          "name": "Header Auth account WA"
-        }
-      }
+      "id": "c86ce5df-86a7-4828-8b56-16db6dd2368e",
+      "webhookId": "bf92226b-c035-4249-8c0d-d77c4dc77e82"
     },
     {
       "parameters": {
@@ -31,12 +24,9 @@
         "rules": {
           "rules": [
             {
-              "operation": "equal",
-              "value2": "session.status",
-              "output": 0
+              "value2": "session.status"
             },
             {
-              "operation": "equal",
               "value2": "message.received",
               "output": 1
             }
@@ -50,7 +40,7 @@
         -256,
         112
       ],
-      "id": "ac8d00be-7adc-4413-9df2-ada2b9f25c19"
+      "id": "ebfdc443-36b0-40e7-b344-bdab388d9853"
     },
     {
       "parameters": {
@@ -64,7 +54,7 @@
         0,
         0
       ],
-      "id": "5a05ca9b-a2d7-487e-89c2-f760a5865da0"
+      "id": "1e4ccdfb-d982-44d4-aad2-3751f52ee970"
     },
     {
       "parameters": {
@@ -78,7 +68,7 @@
         0,
         208
       ],
-      "id": "7f3359b9-3c13-4eb7-aa5b-ad216ab663fc"
+      "id": "310157ab-0d00-4449-ac0f-5c705d1d306a"
     }
   ],
   "pinData": {},
@@ -119,7 +109,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "5ae22daa-4187-4c59-afa2-fc891bfa1785",
+  "versionId": "c144c877-4c2b-40dc-bbcb-dda5866856ec",
   "meta": {
     "instanceId": "b2f956939b829ecd781ac6086c8ae143b4bbfb4eca22502b8b427c7dcde65c2e"
   },

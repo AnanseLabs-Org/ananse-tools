@@ -7,10 +7,10 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
       "position": [
-        -400,
-        32
+        -448,
+        144
       ],
-      "id": "8c088457-92c3-4d4c-a0bd-c968cdb83c3d"
+      "id": "10058c28-6c12-4920-b882-d6f59f9ae63c"
     },
     {
       "parameters": {
@@ -19,12 +19,9 @@
         "rules": {
           "rules": [
             {
-              "operation": "equal",
-              "value2": "disconnected",
-              "output": 0
+              "value2": "disconnected"
             },
             {
-              "operation": "equal",
               "value2": "qr_ready",
               "output": 1
             }
@@ -35,10 +32,10 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 1,
       "position": [
-        -200,
-        32
+        -256,
+        144
       ],
-      "id": "dc9952bf-6e9e-4903-b341-614da0bd374e"
+      "id": "be9cb38e-012f-4448-8f89-76d2f757b16f"
     },
     {
       "parameters": {
@@ -52,10 +49,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        50,
-        -100
+        0,
+        0
       ],
-      "id": "reconnect-session-node-id",
+      "id": "5841c451-7871-4787-bf12-5728d6c29cd6",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -74,7 +71,7 @@
           "parameter": [
             {
               "name": "phoneNumber",
-              "value": "REPLACE_WITH_YOUR_PHONE_NUMBER"
+              "value": "2330256012271"
             }
           ]
         }
@@ -83,10 +80,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        50,
-        100
+        0,
+        208
       ],
-      "id": "787d0729-720b-4ea1-9b12-003d02f11395",
+      "id": "dec8d6bd-0bb7-4242-84bc-dde59e20c537",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -98,17 +95,20 @@
       "parameters": {
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
-        "url": "https://api.bulkclix.com/api/sms/send",
-        "options": {}
+        "requestMethod": "POST",
+        "url": "https://api.bulkclix.com/api/v1/sms-api/send",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n    \"sender_id\": \"fd948063-3902-428f-8063-f176a964fd81\",\n    \"message\": \"WARNING!! Pleasse ignore if you did not request this. Your pairing code for whatsapp is: {{ $json.pairingCode }}\",\n    \"recipients\": [\"{{ $('Request Pairing Code').params.bodyParametersUi.parameter[0].value }}\"]\n}"
       },
       "name": "Send SMS via BulkClix",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
       "position": [
-        250,
-        100
+        208,
+        208
       ],
-      "id": "45c2f6c6-59ab-4e3f-8b7f-0113f23ba5d1",
+      "id": "876c7d05-d618-4d39-8cb0-24ae915ecd2b",
       "credentials": {
         "httpHeaderAuth": {
           "id": "JOClA1VmR7jCMwvO",
@@ -117,7 +117,55 @@
       }
     }
   ],
-  "pinData": {},
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "auto.ananselabs.org",
+            "user-agent": "OpenWA-Webhook/1.0.0",
+            "content-length": "347",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "*",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "153.67.73.26",
+            "cf-ipcountry": "GH",
+            "cf-ray": "a1810cc26dab67d4-JNB",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "6baa49a5-7d74-42a6-a245-48360a0c6770",
+            "connection": "keep-alive",
+            "content-type": "application/json",
+            "sec-fetch-mode": "cors",
+            "x-forwarded-for": "153.67.73.26",
+            "x-forwarded-proto": "https",
+            "x-openwa-delivery-id": "dlv_14c45868-88b3-4aee-ae68-af092f5c25db",
+            "x-openwa-event": "session.status",
+            "x-openwa-idempotency-key": "sess_4a9ce627-2f50-4001-b262-eb91f4227a5e_qr_ready_2026-07-08T18:11:09.555Z",
+            "x-openwa-retry-count": "0"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "session.status",
+            "timestamp": "2026-07-08T18:11:09.555Z",
+            "sessionId": "4a9ce627-2f50-4001-b262-eb91f4227a5e",
+            "idempotencyKey": "sess_4a9ce627-2f50-4001-b262-eb91f4227a5e_qr_ready_2026-07-08T18:11:09.555Z",
+            "deliveryId": "dlv_14c45868-88b3-4aee-ae68-af092f5c25db",
+            "data": {
+              "sessionId": "4a9ce627-2f50-4001-b262-eb91f4227a5e",
+              "status": "qr_ready"
+            }
+          },
+          "webhookUrl": "https://auto.ananselabs.org/webhook/openwa-events",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
   "connections": {
     "Webhook": {
       "main": [
@@ -165,5 +213,12 @@
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
-  }
+  },
+  "versionId": "7d471d40-d318-4648-af58-4cb7f5574872",
+  "meta": {
+    "instanceId": "b2f956939b829ecd781ac6086c8ae143b4bbfb4eca22502b8b427c7dcde65c2e"
+  },
+  "nodeGroups": [],
+  "id": "vGR9rLcFqMm6Pug6",
+  "tags": []
 }
