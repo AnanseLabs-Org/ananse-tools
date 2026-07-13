@@ -2,7 +2,8 @@
 Kali Computer Server — server.py
 =================================
 FastMCP HTTP Server that wraps Kali Linux CLI tools (nmap, gobuster, nikto, sqlmap,
-hydra) and exposes them as MCP tools.
+hydra, searchsploit, msfconsole) and exposes them as MCP tools. Also serves the
+shared Ananse skills library from /root/ananselabs/skills via SkillsDirectoryProvider.
 
 Runs on Streamable HTTP transport, port 8001.
 """
@@ -34,9 +35,19 @@ fastmcp.settings.http_host_origin_protection = False
 
 mcp = FastMCP("kali-server")
 
-skills_path = Path(os.environ.get("SKILLS_DIR", "/app/skills"))
+# Skills are mounted at /root/ananselabs/skills inside the container.
+# SKILLS_DIR env var overrides the default (set in docker-compose).
+# supporting_files="resources" makes every file in every skill individually
+# enumerable via list_resources() — no manifest round-trip required.
+skills_path = Path(os.environ.get("SKILLS_DIR", "/root/ananselabs/skills"))
 skills_path.mkdir(parents=True, exist_ok=True)
-mcp.add_provider(SkillsDirectoryProvider(roots=skills_path, reload=True))
+mcp.add_provider(
+    SkillsDirectoryProvider(
+        roots=skills_path,
+        reload=True,
+        supporting_files="resources",
+    )
+)
 
 def _run(cmd: list[str], timeout: int = 300) -> dict[str, Any]:
     """Execute *cmd* as a subprocess and return a structured result dict."""
@@ -195,6 +206,74 @@ async def hydra(
     cmd += [target, service]
     return _run(cmd)
 
+
+# ── searchsploit ────────────────────────────────────────────────────────────
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+async def searchsploit(
+    *,
+    search_term: str,
+    exact_match: bool = False,
+    additional_args: str = "",
+) -> Dict[str, Any]:
+    """
+    Run searchsploit to search the Exploit-DB archive for known vulnerabilities and exploit code.
+
+    :param search_term: The keyword or CVE to search for.
+    :param exact_match: Perform an exact match search.
+    :param additional_args: Extra searchsploit flags.
+    """
+    cmd = ["searchsploit"]
+    if exact_match:
+        cmd.append("-e")
+    if search_term:
+        cmd.append(search_term)
+    if additional_args:
+        cmd += additional_args.split()
+    return _run(cmd)
+
+# ── msfconsole ──────────────────────────────────────────────────────────────
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+async def msfconsole(
+    *,
+    resource_script: str = "",
+    command_string: str = "",
+    additional_args: str = "",
+) -> Dict[str, Any]:
+    """
+    Run Metasploit Framework (msfconsole) in a non-interactive manner to execute modules or scripts.
+
+    :param resource_script: Path to an msf resource script (.rc) to execute.
+    :param command_string: A single msfconsole command string to execute (via -x).
+    :param additional_args: Extra msfconsole flags.
+    """
+    cmd = ["msfconsole", "-q"]
+    if resource_script:
+        cmd += ["-r", resource_script]
+    if command_string:
+        cmd += ["-x", command_string]
+    if additional_args:
+        cmd += additional_args.split()
+    return _run(cmd)
+
+# ── run_shell_command ───────────────────────────────────────────────────────
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+async def run_shell_command(
+    *,
+    command: str,
+    timeout: int = 300,
+) -> Dict[str, Any]:
+    """
+    Run arbitrary shell commands directly in the Kali container environment.
+    This provides low-level access to the system for running custom scripts or commands not covered by the dedicated tools.
+
+    :param command: The bash command or script to execute.
+    :param timeout: Execution timeout in seconds (default: 300).
+    """
+    cmd = ["bash", "-c", command]
+    return _run(cmd, timeout=timeout)
 
 # ---------------------------------------------------------------------------
 # Entry point

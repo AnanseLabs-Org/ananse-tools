@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-pydantic python3-yaml python3-dotenv python3-click python3-httpx python3-rich \
         sudo \
         nmap gobuster nikto sqlmap hydra dirb \
+        exploitdb metasploit-framework \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

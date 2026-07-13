@@ -20,6 +20,11 @@ from tools.cybops.misc import (
     shodan_myip,
 )
 
+# --- Kali Tools (Server-Side) ---
+# Note: These are registered in tools/servers/kali_server/server.py and exposed via FastMCP.
+# If they need to be imported here for cybops wrapper purposes, they can be referenced.
+# For now, cybops namespace is primarily Shodan. Kali tools are handled by kali_server.
+
 __all__ = [
     # Shodan — DNS
     "shodan_dns_resolve",
