@@ -12,10 +12,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install the kali_server package (server.py + kali-server-mcp entry point).
-# Build context is tools/servers/kali_server/ — everything is copied from there.
-COPY . .
+# Install the kali_server package.
+# Build context is now the ananselabs/ monorepo root (set in docker-compose),
+# so we copy only the server source here.
+COPY tools/servers/kali_server/ .
 RUN pip install --no-cache-dir --break-system-packages .
+
+# ── Bake skills into the image ───────────────────────────────────────────────
+# Copy the entire skills library from the monorepo into /app/skills so they
+# are available without a volume mount. A volume mount can still override this
+# at runtime for local development.
+RUN mkdir -p /app/skills
+COPY skills/skills/ /app/skills/
 
 # Create the standard wordlist directory structure and symlink to the installed dirb wordlist
 RUN mkdir -p /usr/share/wordlists/dirb && ln -sf /usr/share/dirb/wordlists/common.txt /usr/share/wordlists/dirb/common.txt

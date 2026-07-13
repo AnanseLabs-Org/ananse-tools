@@ -35,11 +35,10 @@ fastmcp.settings.http_host_origin_protection = False
 
 mcp = FastMCP("kali-server")
 
-# Skills are mounted at /root/ananselabs/skills inside the container.
-# SKILLS_DIR env var overrides the default (set in docker-compose).
-# supporting_files="resources" makes every file in every skill individually
-# enumerable via list_resources() — no manifest round-trip required.
-skills_path = Path(os.environ.get("SKILLS_DIR", "/root/ananselabs/skills"))
+# Skills are baked into /app/skills at build time (COPY skills/skills/ /app/skills/).
+# SKILLS_DIR env var can override for local dev (volume mount).
+# supporting_files="resources" makes every file enumerable via list_resources().
+skills_path = Path(os.environ.get("SKILLS_DIR", "/app/skills"))
 skills_path.mkdir(parents=True, exist_ok=True)
 mcp.add_provider(
     SkillsDirectoryProvider(
