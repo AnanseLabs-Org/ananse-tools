@@ -9,7 +9,7 @@ services:
     environment:
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8000
-      - MONGO_URI=mongodb://mongodb:27017/ananse_db
+      - MONGO_URI=${MONGO_URI}
       - BULKCLIX_API_KEY=${BULKCLIX_API_KEY:-}
       - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
       - MCP_ENABLE_OAUTH=${MCP_ENABLE_OAUTH:-false}
@@ -28,7 +28,6 @@ services:
       - KALI_TIMEOUT=${KALI_TIMEOUT:-300}
       - SHODAN_API_KEY=${SHODAN_API_KEY:-}
     depends_on:
-      - mongodb
       - kali-server
     networks:
       - default
@@ -57,17 +56,6 @@ services:
     environment:
       - SHODAN_API_KEY=${SHODAN_API_KEY:-}
 
-  mongodb:
-    container_name: hst-ananselabs-tools-mongodb
-    image: mongo:7.0
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - default
-    restart: unless-stopped
-
   n8n:
     container_name: hst-ananselabs-tools-n8n
     image: docker.n8n.io/n8nio/n8n:latest
@@ -92,8 +80,6 @@ services:
       - ./hooks.js:/home/node/hooks.js:ro
     networks:
       - default
-    depends_on:
-      - mongodb
 
   cloudflared-n8n:
     container_name: hst-ananselabs-tools-cloudflared
@@ -153,7 +139,7 @@ services:
     pids_limit: 512
     mem_limit: ${OPENWA_MEM_LIMIT:-2g}
     ports:
-      - '127.0.0.1:${API_PORT:-2785}:2785'
+      - '0.0.0.0:${API_PORT:-2785}:2785'
     expose:
       - '2785'
     environment:
