@@ -42,19 +42,17 @@ services:
   kali-server:
     container_name: hst-ananselabs-tools-kali
     build:
-      context: ..                                   # ananselabs/ monorepo root
-      dockerfile: tools/servers/kali_server/Dockerfile
+      context: ./tools/servers/kali_server
+      dockerfile: Dockerfile
     expose:
       - "8001"
     networks:
       - default
     volumes:
-      # Skills are baked into the image at /app/skills.
-      # Mount this volume only to override during local development.
-      - ${SKILLS_DIR_HOST:-../skills/skills}:${SKILLS_DIR:-/app/skills}
+      # Mount the skills library into /app/skills inside the container.
+      # On the server: ensure /root/ananselabs/skills/skills exists and is synced.
+      - ${SKILLS_DIR_HOST:-/root/ananselabs/skills/skills}:${SKILLS_DIR:-/app/skills}
     restart: unless-stopped
-    # Optional: pass SHODAN_API_KEY through so kali-server can do its own lookups
-    # if needed in future expansions.
     environment:
       - SHODAN_API_KEY=${SHODAN_API_KEY:-}
       - SKILLS_DIR=${SKILLS_DIR:-/app/skills}
