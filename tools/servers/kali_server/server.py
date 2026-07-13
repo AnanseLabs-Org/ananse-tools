@@ -274,6 +274,108 @@ async def run_shell_command(
     cmd = ["bash", "-c", command]
     return _run(cmd, timeout=timeout)
 
+# ── list_skills ────────────────────────────────────────────────────────────
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+async def list_skills() -> list[dict[str, Any]]:
+    """
+    List all active skills in the Kali server's mounted skills directory, parsing metadata from SKILL.md.
+    """
+    import re
+    import yaml
+    skills = []
+    try:
+        if not skills_path.is_dir():
+            return []
+
+        for skill_dir in skills_path.iterdir():
+            if not skill_dir.is_dir() or skill_dir.name.startswith("."):
+                continue
+
+            skill_md_path = skill_dir / "SKILL.md"
+            if not skill_md_path.is_file():
+                continue
+
+            name = skill_dir.name
+            description = ""
+            files = [f.name for f in skill_dir.iterdir() if f.is_file()]
+
+            try:
+                content = skill_md_path.read_text(encoding="utf-8")
+                match = re.match(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+                if match:
+                    frontmatter = yaml.safe_load(match.group(1))
+                    if isinstance(frontmatter, dict):
+                        description = frontmatter.get("description", "")
+                else:
+                    lines = [line.strip() for line in content.splitlines() if line.strip()]
+                    if lines:
+                        description = lines[0].lstrip("#").strip()
+            except Exception:
+                pass
+
+            skills.append({
+                "name": name,
+                "description": description,
+                "files": files,
+            })
+    except Exception as exc:
+        log.exception("Error in list_skills")
+        return [{"error": str(exc)}]
+    return skills
+
+# ── read_skill ──────────────────────────────────────────────────────────────
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+async def read_skill(
+    *,
+    name: str,
+) -> dict[str, Any]:
+    """
+    Read the contents of a specific active agent skill from the Kali server's mounted skills directory.
+
+    :param name: The identifier name of the skill (e.g. 'nightmare').
+    """
+    import re
+    try:
+        # Simple validation
+        if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+            raise ValueError("Invalid skill name")
+            
+        skill_dir = skills_path / name
+        if not skill_dir.is_dir():
+            return {"error": f"Skill '{name}' does not exist under {skills_path}."}
+
+        # Read SKILL.md
+        skill_md_path = skill_dir / "SKILL.md"
+        skill_md_content = ""
+        if skill_md_path.is_file():
+            skill_md_content = skill_md_path.read_text(encoding="utf-8")
+
+        # Read supporting files recursively
+        supporting_files = {}
+        for root, _, files in os.walk(skill_dir):
+            for file in files:
+                if file == "SKILL.md" or file.startswith("."):
+                    continue
+                file_path = Path(root) / file
+                rel_path = file_path.relative_to(skill_dir).as_posix()
+                try:
+                    content = file_path.read_text(encoding="utf-8")
+                    supporting_files[rel_path] = content
+                except UnicodeDecodeError:
+                    supporting_files[rel_path] = f"[Binary File, size: {file_path.stat().st_size} bytes]"
+
+        return {
+            "name": name,
+            "skill_md": skill_md_content,
+            "supporting_files": supporting_files,
+        }
+    except Exception as exc:
+        log.exception("Error in read_skill")
+        return {"error": str(exc)}
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------

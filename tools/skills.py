@@ -156,3 +156,55 @@ async def list_skills() -> List[Dict[str, Any]]:
         return [{"error": str(exc)}]
 
     return skills
+
+
+@general.tool(
+    description="Read the contents of a specific active agent skill (SKILL.md and any supporting files).",
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
+async def read_skill(
+    *,
+    name: str,
+) -> Dict[str, Any]:
+    """
+    Read the contents of a specific active agent skill from the shared skills directory.
+
+    :param name: The identifier name of the skill (e.g. 'nightmare').
+    """
+    try:
+        _validate_skill_name(name)
+        skill_dir = SKILLS_ROOT / name
+        if not skill_dir.is_dir():
+            return {"error": f"Skill '{name}' does not exist under {SKILLS_ROOT}."}
+
+        # Read SKILL.md
+        skill_md_path = skill_dir / "SKILL.md"
+        skill_md_content = ""
+        if skill_md_path.is_file():
+            skill_md_content = skill_md_path.read_text(encoding="utf-8")
+
+        # Read supporting files recursively
+        supporting_files = {}
+        for root, _, files in os.walk(skill_dir):
+            for file in files:
+                if file == "SKILL.md" or file.startswith("."):
+                    continue
+                file_path = Path(root) / file
+                rel_path = file_path.relative_to(skill_dir).as_posix()
+                try:
+                    # Try to read as text
+                    content = file_path.read_text(encoding="utf-8")
+                    supporting_files[rel_path] = content
+                except UnicodeDecodeError:
+                    # Binary file fallback
+                    supporting_files[rel_path] = f"[Binary File, size: {file_path.stat().st_size} bytes]"
+
+        return {
+            "name": name,
+            "skill_md": skill_md_content,
+            "supporting_files": supporting_files,
+        }
+    except Exception as exc:
+        log.exception("Error in read_skill")
+        return {"error": str(exc)}
+

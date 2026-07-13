@@ -32,7 +32,7 @@ services:
     networks:
       - default
     volumes:
-      - ${SKILLS_DIR_HOST:-./skills}:${SKILLS_DIR:-/app/skills}
+      - ${SKILLS_DIR_HOST:-/root/ananselabs/skills/skills}:${SKILLS_DIR:-/app/skills}
     restart: unless-stopped
 
   # ===== Kali Computer Server =====
