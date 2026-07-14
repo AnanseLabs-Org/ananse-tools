@@ -7,7 +7,7 @@ import inspect
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
 from fastmcp.client.transports.sse import SSETransport
-from fastmcp.server.auth.auth import AccessToken
+from fastmcp.server.auth.auth import AccessToken, MultiAuth, JWTVerifier
 from fastmcp.server.auth.providers.auth0 import Auth0Provider
 from fastmcp.server.dependencies import get_access_token
 from mcp.types import ToolAnnotations
@@ -106,7 +106,7 @@ def _build_auth_provider() -> Auth0Provider | None:
     if not all([auth0_domain, auth0_client_id, auth0_client_secret, auth0_audience, public_url]):
         raise RuntimeError("Missing required Auth0 or public URL configurations in environment")
 
-    provider = Auth0Provider(
+    auth0_server = Auth0Provider(
         config_url=f"https://{auth0_domain}/.well-known/openid-configuration",
         client_id=auth0_client_id,
         client_secret=auth0_client_secret,
@@ -115,50 +115,33 @@ def _build_auth_provider() -> Auth0Provider | None:
         client_storage=MongoKeyValue(),
     )
 
-    original_verify = provider.verify_token
+    role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
+    if role_secret:
+        role_secret = role_secret.strip('\'"')
 
-    async def custom_verify_token(token: str):
-        print(f"DEBUG_VERIFY: incoming token={repr(token)}", flush=True)
-        clean_token = token[7:] if token.lower().startswith("bearer ") else token
+    if role_secret:
+        class CustomJWTVerifier(JWTVerifier):
+            async def verify_token(self, token: str) -> AccessToken | None:
+                print(f"DEBUG_JWT_VERIFIER: incoming token={repr(token)}", flush=True)
+                try:
+                    res = await super().verify_token(token)
+                    if res and res.claims:
+                        role = res.claims.get("role", "user")
+                        res.claims["roles"] = [role]
+                    print(f"DEBUG_JWT_VERIFIER: validation succeeded, res={res}", flush=True)
+                    return res
+                except Exception as e:
+                    print(f"DEBUG_JWT_VERIFIER: validation failed: {e}", flush=True)
+                    raise
 
-        # 1. Try a role token (signed with MCP_ROLE_TOKEN_SECRET)
-        role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
-        if role_secret:
-            role_secret = role_secret.strip('\'"')
-        if role_secret:
-            try:
-                print(f"DEBUG_VERIFY: decoding with role_secret length={len(role_secret)}", flush=True)
-                payload = pyjwt.decode(clean_token, role_secret, algorithms=["HS256"])
-                role = payload.get("role", "user")
-                print(f"DEBUG_VERIFY: successful HS256 decode, resolved role={role}", flush=True)
-                res = AccessToken(
-                    token=token,
-                    subject="m2m-user",
-                    client_id="m2m",
-                    scopes=["openid"],
-                    claims={"scope": "openid", "roles": [role]},
-                )
-                print(f"DEBUG_VERIFY: returning AccessToken={res}", flush=True)
-                return res
-            except pyjwt.PyJWTError as e:
-                print(f"DEBUG_VERIFY: role token decode failed: {e}", flush=True)
-            except Exception as e:
-                print(f"DEBUG_VERIFY: role token general exception: {e}", flush=True)
-        else:
-            print("DEBUG_VERIFY: role_secret is empty or None!", flush=True)
+        jwt_verifier = CustomJWTVerifier(
+            secret=role_secret,
+            algorithms=["HS256"],
+            required_scopes=[],
+        )
+        return MultiAuth(server=auth0_server, verifiers=[jwt_verifier])
 
-        # 3. Fall back to normal Auth0 verification
-        print("DEBUG_VERIFY: falling back to original Auth0 verify_token", flush=True)
-        try:
-            res = await original_verify(token)
-            print(f"DEBUG_VERIFY: original verify returned AccessToken={res}", flush=True)
-            return res
-        except Exception as e:
-            print(f"DEBUG_VERIFY: original verify raised: {e}", flush=True)
-            raise
-
-    provider.verify_token = custom_verify_token
-    return provider
+    return auth0_server
 
 
 auth_provider = _build_auth_provider()
