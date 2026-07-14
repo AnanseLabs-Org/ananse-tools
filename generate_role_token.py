@@ -22,7 +22,7 @@ def main():
     payload = {"role": role}
     token = pyjwt.encode(payload, secret, algorithm="HS256")
     print(f"Role: {role}")
-    print(f"X-Role-Token: {token}")
+    print(f"X-API-Key: {token}")
 
 if __name__ == "__main__":
     main()

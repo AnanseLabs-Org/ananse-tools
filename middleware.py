@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 def get_user_role() -> str | None:
     """
-    Extract and verify the user role from the 'X-Role-Token' header.
+    Extract and verify the user role from the 'x-api-key' or 'authorization' header.
     If the header is missing (or if request context is not available), returns None.
     If the token is present but invalid or expired, raises a ToolError.
     """
@@ -21,7 +21,17 @@ def get_user_role() -> str | None:
         # Default to None if not running in HTTP request context (e.g. stdio transport)
         return None
 
-    token_header = request.headers.get("x-role-token")
+    # Look for x-api-key first
+    token_header = request.headers.get("x-api-key")
+    if not token_header:
+        # Fall back to authorization header
+        auth_header = request.headers.get("authorization")
+        if auth_header:
+            if auth_header.lower().startswith("bearer "):
+                token_header = auth_header[7:]
+            else:
+                token_header = auth_header
+
     if not token_header:
         return None
 
@@ -29,7 +39,7 @@ def get_user_role() -> str | None:
     if secret:
         secret = secret.strip('\'"')
     if not secret:
-        log.warning("x-role-token header present, but MCP_ROLE_TOKEN_SECRET is not set.")
+        log.warning("Authentication header present, but MCP_ROLE_TOKEN_SECRET is not set.")
         raise ToolError("Security configuration error: MCP_ROLE_TOKEN_SECRET not set")
 
     try:
@@ -64,10 +74,10 @@ def get_user_role() -> str | None:
 def get_resolved_role() -> str:
     """
     Resolves the caller's role to 'admin' or 'user' by checking both
-    the 'X-Role-Token' header and the OAuth token claims (OR logic).
+    the 'x-api-key'/'authorization' header and the OAuth token claims (OR logic).
     If no token is provided by either method, raises a ToolError (no access).
     """
-    # 1. Check X-Role-Token header
+    # 1. Check custom token header (x-api-key or authorization)
     role = get_user_role()
     if role == "admin":
         return "admin"
