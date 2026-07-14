@@ -217,7 +217,12 @@ class SSESessionRewriteMiddleware:
             method = scope["method"]
             headers = dict(scope["headers"])
 
-            # Convert x-role-token case-insensitively to Authorization: Bearer
+            # Convert x-api-key to Authorization: Bearer
+            x_api_key = headers.get(b"x-api-key")
+            if x_api_key:
+                headers[b"authorization"] = b"Bearer " + x_api_key
+
+            # Convert x-role-token case-insensitively to Authorization: Bearer (takes precedence)
             role_token = None
             for k, v in headers.items():
                 if k.lower() == b"x-role-token":
@@ -225,11 +230,6 @@ class SSESessionRewriteMiddleware:
                     break
             if role_token:
                 headers[b"authorization"] = b"Bearer " + role_token
-
-            # Convert x-api-key to Authorization: Bearer
-            x_api_key = headers.get(b"x-api-key")
-            if x_api_key:
-                headers[b"authorization"] = b"Bearer " + x_api_key
 
             # Ensure Authorization header starts with Bearer
             auth_header = headers.get(b"authorization")
