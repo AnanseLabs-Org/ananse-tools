@@ -26,6 +26,8 @@ def get_user_role() -> str | None:
         return None
 
     secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
+    if secret:
+        secret = secret.strip('\'"')
     if not secret:
         log.warning("x-role-token header present, but MCP_ROLE_TOKEN_SECRET is not set.")
         raise ToolError("Security configuration error: MCP_ROLE_TOKEN_SECRET not set")

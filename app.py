@@ -123,6 +123,8 @@ def _build_auth_provider() -> Auth0Provider | None:
         # 1. Try a role token (signed with MCP_ROLE_TOKEN_SECRET)
         role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
         if role_secret:
+            role_secret = role_secret.strip('\'"')
+        if role_secret:
             try:
                 payload = pyjwt.decode(clean_token, role_secret, algorithms=["HS256"])
                 role = payload.get("role", "user")
@@ -192,6 +194,8 @@ mcp.mount(kali_proxy, namespace="cybops")
 n8n_server_url = os.environ.get("N8N_MCP_SERVER_URL", "https://auto.ananselabs.org/mcp-server/http")
 n8n_headers = {}
 n8n_api_key = os.environ.get("N8N_API_KEY")
+if n8n_api_key:
+    n8n_api_key = n8n_api_key.strip('\'"')
 if n8n_api_key:
     n8n_headers["X-N8N-API-KEY"] = n8n_api_key
 n8n_transport = SSETransport(n8n_server_url, headers=n8n_headers)
