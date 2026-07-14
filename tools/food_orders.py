@@ -11,6 +11,7 @@ from vendors.registry import STATIC_VENDORS_LIST
 
 @mcp.tool(
     description="Save or update a customer profile in MongoDB, including delivery address, landmark, and default MoMo payment number.",
+    tags={"role:food_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def save_customer_profile(
@@ -50,6 +51,7 @@ async def save_customer_profile(
 
 @mcp.tool(
     description="Retrieve a saved customer profile from MongoDB by phone number to get delivery address and payment preferences.",
+    tags={"role:food_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def get_customer_profile(phone_number: str) -> Dict[str, Any]:
@@ -77,6 +79,7 @@ class MerchantOrderItem(BaseModel):
 
 @mcp.tool(
     description="Place a food order directly with a restaurant merchant. Creates an order record in MongoDB, triggers MoMo payment collection from customer, and sends an order SMS dispatch to the merchant.",
+    tags={"role:food_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def place_merchant_order(
@@ -163,6 +166,7 @@ async def place_merchant_order(
 
 @mcp.tool(
     description="Track real-time status and delivery details of an order from MongoDB.",
+    tags={"role:food_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def track_order(order_id: str) -> Dict[str, Any]:
@@ -180,7 +184,7 @@ async def track_order(order_id: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to track order: {e}"}
 
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:food_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def update_order_status(order_id: str, status: str) -> Dict[str, Any]:
     """
     [Internal Tool] Update the delivery lifecycle status of an order (e.g. CONFIRMED, IN_TRANSIT, DELIVERED).

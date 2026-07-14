@@ -3,7 +3,7 @@ from mcp.types import ToolAnnotations
 from app import general as mcp
 from http_client import _call_api
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(tags={"role:bank_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def bank_transfer_send(
     *,
     amount: float,

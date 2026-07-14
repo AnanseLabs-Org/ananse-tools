@@ -5,7 +5,7 @@ from http_client import _call_api
 from auth import _get_payment_bearer_token
 from payments.helpers import _fetch_payment_history, _find_payment_history_match, _is_not_found_response, _payment_status_from_record
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(tags={"role:payments_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def momo_collect(
     *,
     amount: float,
@@ -38,6 +38,7 @@ async def momo_collect(
 
 @mcp.tool(
     description="Check the status of a Mobile Money collection or transaction. :param transaction_id: The transaction ID returned during collection. :param payment_id: Optional payment record ID if you already have it.",
+    tags={"role:payments_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def momo_check_status(
@@ -73,6 +74,7 @@ async def momo_check_status(
 
 @mcp.tool(
     description="Verify a payment OTP after the customer reads the code from their phone and sends it in chat. CRITICAL: This is ONLY for validating payment-related transactions. The request_id MUST be the one returned in the response of a payment/purchase initiation tool (e.g., airtime_purchase, data_purchase, or momo_collect), NOT from otp_send_sms. Providing a standard SMS OTP request ID will result in a 404 Error. :param code: OTP code entered by the customer from their phone. :param request_id: Request ID returned from the payment/purchase initiation response. :param phone_number: The phone number used for the payment transaction.",
+    tags={"role:payments_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True)
 )
 async def pay_verify_otp(
@@ -107,7 +109,7 @@ async def pay_verify_otp(
     )
 
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(tags={"role:payments_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def momo_disburse(
     *,
     amount: float,

@@ -36,7 +36,7 @@ async def _get_default_sender_id() -> str:
     raise RuntimeError("No sender ID is configured on the BulkClix account.")
 
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:sms_user"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def sms_send(
     *,
     message: str,
@@ -58,7 +58,7 @@ async def sms_send(
         }
     )
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:sms_user"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def sms_get_campaign_report(
     *,
     campaign_id: str
@@ -69,14 +69,14 @@ async def sms_get_campaign_report(
     """
     return await _call_api("GET", f"/sms-api/campaignMessages/{campaign_id}")
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:sms_user"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def senderid_list() -> Dict[str, Any]:
     """
     List all SMS Sender IDs registered on your BulkClix account along with their status.
     """
     return await _call_api("GET", "/sms-api/senderIds")
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:sms_user"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def senderid_request(
     *,
     name: str,

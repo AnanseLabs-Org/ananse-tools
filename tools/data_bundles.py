@@ -35,6 +35,7 @@ def _find_bundle_price(payload: Any, bundle_id: str) -> float | None:
 
 @mcp.tool(
     description="List available data bundle services.",
+    tags={"role:data_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def data_get_bundles(
@@ -49,6 +50,7 @@ async def data_get_bundles(
 
 @mcp.tool(
     description="List available data bundle offers for a service and phone number. :param service_id: Data service UUID. :param phone_number: Recipient phone number.",
+    tags={"role:data_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def data_get_offers(
@@ -68,6 +70,7 @@ async def data_get_offers(
 
 @mcp.tool(
     description="Start a data bundle purchase using the BulkClix purchase route.",
+    tags={"role:data_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def data_purchase(
@@ -119,6 +122,7 @@ async def data_purchase(
 
 @mcp.tool(
     description="Check the status of a data bundle payment or purchase by order ID.",
+    tags={"role:data_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def data_check_status(

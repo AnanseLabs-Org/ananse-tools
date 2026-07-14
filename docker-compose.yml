@@ -12,25 +12,18 @@ services:
       - MONGO_URI=${MONGO_URI}
       - BULKCLIX_API_KEY=${BULKCLIX_API_KEY:-}
       - CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
-      - MCP_ENABLE_OAUTH=${MCP_ENABLE_OAUTH:-false}
       - MCP_PUBLIC_URL=${MCP_PUBLIC_URL:-https://tools.ananselabs.org}
-      - MCP_ENABLE_AUTH0=${MCP_ENABLE_AUTH0:-false}
-      - AUTH0_DOMAIN=${AUTH0_DOMAIN:-}
-      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE:-}
-      - AUTH0_CLIENT_ID=${AUTH0_CLIENT_ID:-}
-      - AUTH0_CLIENT_SECRET=${AUTH0_CLIENT_SECRET:-}
+      - KEYCLOAK_REALM_URL=${KEYCLOAK_REALM_URL:-http://keycloak:8080/realms/ananse}
       - OPENAI_APPS_CHALLENGE_TOKEN=${OPENAI_APPS_CHALLENGE_TOKEN:-}
-      - MCP_STATIC_TOKEN=${MCP_STATIC_TOKEN:-}
-      - MCP_STATIC_TOKEN_SECRET=${MCP_STATIC_TOKEN_SECRET:-}
       - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://ollama:11434}
       - KALI_SERVER_URL=${KALI_SERVER_URL:-http://kali-server:8001/mcp}
       - KALI_TIMEOUT=${KALI_TIMEOUT:-300}
       - SHODAN_API_KEY=${SHODAN_API_KEY:-}
-      - MCP_ROLE_TOKEN_SECRET=${MCP_ROLE_TOKEN_SECRET:-}
       - N8N_API_KEY=${N8N_API_KEY:-}
       - OPENWA_API_KEY=${OPENWA_API_KEY:-}
     depends_on:
       - kali-server
+      - keycloak
     networks:
       - default
     volumes:
@@ -234,6 +227,51 @@ services:
       - 'com.openwa.service=cache'
       - 'com.openwa.builtin=true'
 
+  # ===== IDENTITY: Keycloak PostgreSQL Database =====
+  keycloak-db:
+    container_name: hst-ananselabs-keycloak-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== IDENTITY: Keycloak (AuthN + AuthZ) =====
+  keycloak:
+    container_name: hst-ananselabs-keycloak
+    image: quay.io/keycloak/keycloak:26.6.0
+    restart: unless-stopped
+    command: start
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_HOSTNAME: ${KC_HOSTNAME:-auth.ananselabs.org}
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_FEATURES: dynamic-scopes,token-exchange
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - default
+    ports:
+      - "8080:8080"
+
   # ===== LOCAL SEMANTIC SEARCH: Ollama =====
   ollama:
     container_name: hst-ananselabs-tools-ollama
@@ -262,6 +300,8 @@ volumes:
   ollama-data:
     name: openwa_ollama-data
     external: true
+  keycloak_db_data:
+    name: ananselabs_keycloak_db
 
 networks:
   default:

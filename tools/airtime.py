@@ -5,6 +5,7 @@ from http_client import _call_api
 
 @mcp.tool(
     description="Get supported networks for airtime top-up.",
+    tags={"role:airtime_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def airtime_get_networks() -> Dict[str, Any]:
@@ -15,6 +16,7 @@ async def airtime_get_networks() -> Dict[str, Any]:
 
 @mcp.tool(
     description="Start an airtime purchase using the BulkClix purchase route. :param destination: Recipient phone number receiving the airtime. :param phone_number: MoMo phone number being charged for payment. :param network: Payer network code (e.g., 'MTN', 'VDF', 'ATL'). :param amount: Airtime purchase amount in GHS. :param network_id: Network UUID from airtime_get_networks. :param payment_type: Payment type (usually 'momo').",
+    tags={"role:airtime_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def airtime_purchase(
@@ -61,7 +63,7 @@ async def airtime_purchase(
         json_data=payload,
     )
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:airtime_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def airtime_send(
     *,
     phone_number: str,

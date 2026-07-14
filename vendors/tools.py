@@ -13,6 +13,7 @@ from vendors.menu import _flatten_menu
 
 @mcp.tool(
     description="List available vendors to purchase goods from using BulkClix payment. :param vendor_id: Vendor's UUID. If given, returns just that vendor. :param category: Vendor's category of goods (e.g. 'restaurant', 'food', 'airtime'). If given, filters vendors using case-insensitive substring and synonym expansion. :param page: Page number for pagination (default 1). :param page_size: Page size for pagination (default 10).",
+    tags={"role:vendors_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def get_verified_vendors(
@@ -71,6 +72,7 @@ async def get_verified_vendors(
 
 @mcp.tool(
     description="List available menu items for a vendor, flattened and checkout-ready — each item has dish_id, name, price, is_available, and addons. No nested categories. :param vendor_id: Vendor's UUID. :param query: Optional case-insensitive substring filter on dish name. :param page: Page number for pagination (default 1). :param page_size: Page size for pagination (default 10).",
+    tags={"role:vendors_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def get_verified_vendors_menu(
@@ -157,6 +159,7 @@ class VendorOrderItem(BaseModel):
         ":param delivery_address: Delivery address string. REQUIRED when order_type is 'delivery' — ask the user before calling. "
         ":returns: dict with success, order_id, payment status, and vendor confirmation."
     ),
+    tags={"role:vendors_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def create_verified_vendors_order(
@@ -246,6 +249,7 @@ async def create_verified_vendors_order(
 
 @mcp.tool(
     description="Search for food items, dishes, pizza, rice, chicken, or menus across all verified vendors or a specific vendor. Use this when asking 'what food is available', 'show me the menu', 'do you have pizza', 'search menu for burger'.",
+    tags={"role:vendors_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def find_food_items(
@@ -273,6 +277,7 @@ async def find_food_items(
 
 @mcp.tool(
     description="List all categories of goods (e.g. 'restaurant', 'food', 'airtime', 'data') supported by the verified vendors.",
+    tags={"role:vendors_user"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def list_vendor_categories() -> Dict[str, Any]:

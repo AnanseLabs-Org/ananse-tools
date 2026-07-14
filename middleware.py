@@ -1,139 +1,101 @@
+"""
+Keycloak role-based authorization middleware for FastMCP.
+
+Reads ``realm_access.roles`` from the validated Keycloak JWT and:
+
+- ``on_list_tools``  – filters out tools whose required role the caller lacks
+- ``on_call_tool``   – blocks execution with ToolError if the caller lacks the role
+
+Role requirements are declared on tools via a ``role:`` tag, e.g.::
+
+    @mcp.tool(tags={"role:sms_user"})
+    async def sms_send(...): ...
+
+The special tag ``role:admin`` requires the ``admin`` realm role.
+If a tool carries **no** ``role:*`` tag it is accessible to any authenticated user.
+Callers who hold the ``admin`` realm role bypass all per-tool role checks.
+"""
 from __future__ import annotations
 
-import os
 import logging
-import jwt as pyjwt
 from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.server.dependencies import get_access_token
 from fastmcp.exceptions import ToolError
-from fastmcp.server.dependencies import get_access_token, get_http_request
 
 log = logging.getLogger(__name__)
 
-def get_user_role() -> str | None:
+ROLE_TAG_PREFIX = "role:"
+
+
+def _get_caller_roles() -> set[str]:
+    """Extract Keycloak realm roles from the current request's access token.
+
+    Returns an empty set when no token is present (unauthenticated request).
+    FastMCP's KeycloakAuthProvider will already have rejected the request before
+    we reach this point if authentication is required, so an empty set here
+    only applies to optional/public paths.
     """
-    Extract and verify the user role from the 'x-api-key' or 'authorization' header.
-    If the header is missing (or if request context is not available), returns None.
-    If the token is present but invalid or expired, raises a ToolError.
-    """
-    try:
-        request = get_http_request()
-    except Exception:
-        # Default to None if not running in HTTP request context (e.g. stdio transport)
-        return None
-
-    # Look for x-api-key first
-    token_header = request.headers.get("x-api-key")
-    if not token_header:
-        # Fall back to authorization header
-        auth_header = request.headers.get("authorization")
-        if auth_header:
-            if auth_header.lower().startswith("bearer "):
-                token_header = auth_header[7:]
-            else:
-                token_header = auth_header
-
-    if not token_header:
-        return None
-
-    secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
-    if secret:
-        secret = secret.strip('\'"')
-    if not secret:
-        log.warning("Authentication header present, but MCP_ROLE_TOKEN_SECRET is not set.")
-        raise ToolError("Security configuration error: MCP_ROLE_TOKEN_SECRET not set")
-
-    try:
-        token = token_header
-        if token.lower().startswith("bearer "):
-            token = token[7:]
-
-        payload = pyjwt.decode(token, secret, algorithms=["HS256"])
-        role = payload.get("role")
-        if not role:
-            roles = payload.get("roles")
-            if roles:
-                if isinstance(roles, str):
-                    role = roles
-                elif isinstance(roles, list) and len(roles) > 0:
-                    role = roles[0]
-
-        if not role:
-            raise ToolError("Invalid token: no role/roles claim found")
-
-        role = role.lower()
-        if role not in ("user", "admin"):
-            raise ToolError(f"Invalid token: unknown role '{role}'")
-
-        return role
-
-    except pyjwt.ExpiredSignatureError:
-        raise ToolError("Token signature has expired")
-    except pyjwt.InvalidTokenError as e:
-        raise ToolError(f"Invalid security token: {str(e)}")
-
-def get_resolved_role() -> str:
-    """
-    Resolves the caller's role to 'admin' or 'user' by checking both
-    the 'x-api-key'/'authorization' header and the OAuth token claims (OR logic).
-    If no token is provided by either method, raises a ToolError (no access).
-    """
-    # 1. Check custom token header (x-api-key or authorization)
-    role = get_user_role()
-    if role == "admin":
-        return "admin"
-    elif role == "user":
-        return "user"
-
-    # 2. Check OAuth access token claims
     try:
         token = get_access_token()
-        if token is not None:
-            claims = getattr(token, "claims", None) or {}
-            roles = claims.get("roles", [])
-            if isinstance(roles, str):
-                roles = [roles]
-            if "admin" in roles:
-                return "admin"
-            return "user"
-    except Exception:
-        pass
+        if token is None:
+            return set()
+        claims = getattr(token, "claims", None) or {}
+        roles = claims.get("realm_access", {}).get("roles", [])
+        return set(roles)
+    except Exception as exc:
+        log.warning("Could not extract Keycloak realm roles: %s", exc)
+        return set()
 
-    # No token provided by either method
-    raise ToolError("Authentication required: no token provided")
 
-class RoleSecurityMiddleware(Middleware):
-    """Enforce role-based access control checking both X-Role-Token and OAuth claims."""
+def _required_role(tool) -> str | None:
+    """Return the required role from a tool's ``role:*`` tag, or ``None`` if unrestricted."""
+    tags = getattr(tool, "tags", None) or set()
+    for tag in tags:
+        if isinstance(tag, str) and tag.startswith(ROLE_TAG_PREFIX):
+            return tag[len(ROLE_TAG_PREFIX):]
+    return None
+
+
+def _caller_has_access(tool, caller_roles: set[str]) -> bool:
+    """Return True if the caller's roles satisfy the tool's role requirement."""
+    required = _required_role(tool)
+    if required is None:
+        return True  # No role restriction — open to any authenticated user
+    # Callers with the 'admin' realm role always pass
+    return required in caller_roles or "admin" in caller_roles
+
+
+class KeycloakRoleMiddleware(Middleware):
+    """Enforce role-based access control using Keycloak ``realm_access.roles`` claims.
+
+    Listing operations (``tools/list``) silently filter out inaccessible tools.
+    Execution operations (``tools/call``) raise a ``ToolError`` if access is denied.
+    """
 
     async def on_list_tools(self, context: MiddlewareContext, call_next):
         tools = await call_next(context)
-        role = get_resolved_role()
-        if role == "admin":
-            return tools
-        # Filter out admin-tagged tools for non-admins
-        filtered = [t for t in tools if "admin" not in (getattr(t, "tags", None) or set())]
-        return filtered
+        caller_roles = _get_caller_roles()
+        if "admin" in caller_roles:
+            return tools  # Admins see everything
+        return [t for t in tools if _caller_has_access(t, caller_roles)]
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
-        role = get_resolved_role()
-        if role != "admin":
-            if context.fastmcp_context:
-                try:
-                    tool = await context.fastmcp_context.fastmcp.get_tool(context.message.name)
-                    tags = getattr(tool, "tags", None) or set()
-                    if "admin" in tags:
-                        raise ToolError("Access denied: admin privileges required")
-                except ToolError:
-                    raise
-                except Exception as e:
-                    # Let execution handle missing tools
-                    log.warning("Error checking tags for tool %s: %s", context.message.name, e)
+        caller_roles = _get_caller_roles()
+        if "admin" not in caller_roles and context.fastmcp_context:
+            try:
+                tool = await context.fastmcp_context.fastmcp.get_tool(
+                    context.message.name
+                )
+                if not _caller_has_access(tool, caller_roles):
+                    required = _required_role(tool)
+                    raise ToolError(
+                        f"Access denied: role '{required}' required. "
+                        f"Your roles: {sorted(caller_roles) or ['none']}"
+                    )
+            except ToolError:
+                raise
+            except Exception as exc:
+                log.warning(
+                    "Role check error for tool %s: %s", context.message.name, exc
+                )
         return await call_next(context)
-
-class AdminTagMiddleware(Middleware):
-    """Legacy middleware: role checking is now handled by RoleSecurityMiddleware."""
-    async def on_list_tools(self, context, call_next):
-        return await call_next(context)
-    async def on_call_tool(self, context, call_next):
-        return await call_next(context)
-
-

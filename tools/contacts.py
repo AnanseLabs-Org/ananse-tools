@@ -3,14 +3,14 @@ from mcp.types import ToolAnnotations
 from app import general as mcp
 from http_client import _call_api
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def contacts_list_groups() -> Dict[str, Any]:
     """
     List contact groups configured on your account.
     """
     return await _call_api("GET", "/sms-api/contact/getGroups")
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def contacts_create_group(
     *,
     name: str,
@@ -25,7 +25,7 @@ async def contacts_create_group(
         json_data={"name": name, "group_icon": group_icon}
     )
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def contacts_update_group(
     *,
     group_id: str,
@@ -40,7 +40,7 @@ async def contacts_update_group(
         data["group_icon"] = group_icon
     return await _call_api("PATCH", f"/sms-api/contact/updateGroup/{group_id}", json_data=data)
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def contacts_delete_group(
     *,
     group_id: str
@@ -50,7 +50,7 @@ async def contacts_delete_group(
     """
     return await _call_api("DELETE", f"/sms-api/contact/deleteGroup/{group_id}")
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def contacts_list(
     *,
     group_id: str
@@ -60,7 +60,7 @@ async def contacts_list(
     """
     return await _call_api("GET", f"/sms-api/contact/getContacts/{group_id}")
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def contacts_add(
     *,
     first_name: str,
@@ -82,7 +82,7 @@ async def contacts_add(
         data["email"] = email
     return await _call_api("POST", "/sms-api/contact/addContact", json_data=data)
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def contacts_add_bulk(
     *,
     contact_group_id: str,
@@ -100,7 +100,7 @@ async def contacts_add_bulk(
         }
     )
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def contacts_update(
     *,
     contact_id: str,
@@ -120,7 +120,7 @@ async def contacts_update(
         data["phone_number"] = phone_number
     return await _call_api("PATCH", f"/sms-api/contact/updateContact/{contact_id}", json_data=data)
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(tags={"role:contacts_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def contacts_delete(
     *,
     contact_id: str

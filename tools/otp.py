@@ -6,6 +6,7 @@ from tools.sms import _get_default_sender_id
 
 @mcp.tool(
     description="Send an OTP (One-Time Password) via SMS. CRITICAL: The message parameter MUST contain the exact placeholder <%otp_code%>. If this placeholder is missing, the API call will fail with a 422 error. :param phone_number: Recipient phone number (e.g. '0541000000'). :param message: Message template containing <%otp_code%> (e.g. 'Your verification code is: <%otp_code%>'). :param expiry: OTP validity duration in minutes (default 5). :param length: Digit length of the OTP (default 4).",
+    tags={"role:otp_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def otp_send_sms(
@@ -39,6 +40,7 @@ async def otp_send_sms(
 
 @mcp.tool(
     description="Verify an OTP code that was sent via SMS. :param request_id: The requestId returned from sending the OTP. :param phone_number: The phone number the OTP was sent to. :param code: The code input by the user to check.",
+    tags={"role:otp_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def otp_verify_sms(
@@ -65,6 +67,7 @@ async def otp_verify_sms(
 
 @mcp.tool(
     description="Send an OTP (One-Time Password) via Email. CRITICAL: The message parameter MUST contain the exact placeholder <%otp_code%>. If this placeholder is missing, the API call will fail with a 422 error. :param email: Recipient email address. :param subject: Email subject. :param message: Email body containing <%otp_code%> template (e.g. 'Your verification code is: <%otp_code%>'). :param expiry: OTP validity duration in minutes (default 5). :param length: Digit length of the OTP (default 4).",
+    tags={"role:otp_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def otp_send_email(
@@ -99,6 +102,7 @@ async def otp_send_email(
 
 @mcp.tool(
     description="Verify an OTP code that was sent via Email. :param request_id: The requestId returned from sending the OTP. :param email: The email address the OTP was sent to. :param code: The verification code to verify.",
+    tags={"role:otp_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def otp_verify_email(

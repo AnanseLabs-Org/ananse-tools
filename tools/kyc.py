@@ -3,7 +3,7 @@ from mcp.types import ToolAnnotations
 from app import general as mcp
 from http_client import _call_api
 
-@mcp.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(tags={"role:kyc_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def kyc_msisdn_name_query(
     *,
     phone_number: str

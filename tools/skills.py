@@ -38,6 +38,7 @@ def _validate_file_name(name: str) -> None:
 
 @general.tool(
     description="Create or update an agent skill in the shared skills directory.",
+    tags={"role:skills_admin"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
 )
 async def create_or_update_skill(
@@ -77,6 +78,7 @@ async def create_or_update_skill(
 
 @general.tool(
     description="Delete an agent skill from the shared skills directory.",
+    tags={"role:skills_admin"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True)
 )
 async def delete_skill(
@@ -104,6 +106,7 @@ async def delete_skill(
 
 @general.tool(
     description="List all active agent skills in the shared skills directory.",
+    tags={"role:skills_admin"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def list_skills() -> List[Dict[str, Any]]:
@@ -160,6 +163,7 @@ async def list_skills() -> List[Dict[str, Any]]:
 
 @general.tool(
     description="Read the contents of a specific active agent skill (SKILL.md and any supporting files).",
+    tags={"role:skills_admin"},
     annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
 )
 async def read_skill(
