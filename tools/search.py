@@ -136,6 +136,7 @@ async def rebuild_semantic_index() -> int:
 
 from mcp.types import ToolAnnotations
 from app import general as mcp
+from middleware import get_user_role
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def search(
@@ -165,19 +166,36 @@ async def search(
             "error": f"Failed to compute query embedding: {e}"
         }
 
+    # 3. Resolve user role to filter results
+    role = get_user_role()
+
     # --- DOMAIN A: MCP Tools ---
     matched_tools = []
     try:
-        from app import mcp
+        import inspect
+        from app import mcp as root_mcp
         all_tools = []
-        for key, comp in mcp._local_provider._components.items():
-            if key.startswith("tool:"):
-                name = getattr(comp, "name", "")
+        for p in root_mcp.providers:
+            try:
+                res = p.list_tools()
+                if inspect.iscoroutine(res):
+                    tools = await res
+                else:
+                    tools = res
+            except Exception:
+                continue
+
+            for tool in tools:
+                name = getattr(tool, "name", "")
                 if name == "search":
                     continue
-                desc = getattr(comp, "description", "") or ""
-                if not desc and hasattr(comp, "fn") and comp.fn:
-                    desc = comp.fn.__doc__ or ""
+                
+                # Enforce security role check on search results
+                tags = getattr(tool, "tags", None) or set()
+                if role != "admin" and "admin" in tags:
+                    continue
+
+                desc = getattr(tool, "description", "") or ""
                 all_tools.append({
                     "name": name,
                     "description": desc.strip()

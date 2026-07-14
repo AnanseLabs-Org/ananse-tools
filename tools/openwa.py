@@ -6,6 +6,7 @@ import httpx
 from fastmcp import FastMCP
 from app import general as mcp
 
+openwa_admin = FastMCP("openwa")
 logger = logging.getLogger("mcp-openwa")
 
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), "config")
@@ -110,14 +111,14 @@ def initialize_openwa_mcp():
     filtered_schema = filter_openapi_spec(schema, rules)
 
     # 3. Configure authentication headers and httpx client
-    master_key = os.environ.get("API_MASTER_KEY", "")
+    master_key = os.environ.get("OPENWA_API_KEY", "")
     headers = {}
     if master_key:
         # OpenWA supports both X-API-Key and Authorization Bearer header
         headers["X-API-Key"] = master_key
-        logger.info("API_MASTER_KEY configured; injecting X-API-Key auth header.")
+        logger.info("OpenWA authentication key configured; injecting X-API-Key auth header.")
     else:
-        logger.warning("No API_MASTER_KEY found in environment. OpenWA requests might be unauthenticated.")
+        logger.warning("No OPENWA_API_KEY found in environment. OpenWA requests might be unauthenticated.")
 
     # Rewrite servers list in OpenAPI spec to point to the docker container URL
     filtered_schema["servers"] = [{"url": OPENWA_SERVICE_URL}]
@@ -138,11 +139,213 @@ def initialize_openwa_mcp():
             validate_output=False  # Disable strict output validation to handle dynamic responses cleanly
         )
 
-        # 5. Mount the child server on our main app server
-        mcp.mount(openwa_server)
-        logger.info("Successfully mounted OpenWA MCP tools.")
+        # 5. Mount the child servers on our main app server
+        mcp.mount(openwa_server, namespace="openwa")
+        mcp.mount(openwa_admin, namespace="openwa")
+        logger.info("Successfully mounted OpenWA MCP tools under openwa namespace.")
     except Exception as e:
         logger.error(f"Failed to create and mount OpenWA FastMCP server: {e}")
 
 # Trigger registration on import
 initialize_openwa_mcp()
+
+# ── Custom WhatsApp Admin & Setup Tools ──────────────────────────────────────────
+
+from mcp.types import ToolAnnotations
+
+@openwa_admin.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+async def setup_session(
+    session_name: str = "ananse-whatsapp",
+    webhook_url: str = "https://auto.ananselabs.org/webhook/openwa-events"
+) -> dict:
+    """
+    [Internal Tool] Setup the configuration for a WhatsApp session by creating it,
+    registering the n8n webhook, and initiating the connection.
+    """
+    headers = {}
+    master_key = os.environ.get("OPENWA_API_KEY")
+    if master_key:
+        headers["X-API-Key"] = master_key
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # 1. Create the session (or check if exists)
+        try:
+            res = await client.post(
+                f"{OPENWA_SERVICE_URL}/api/sessions",
+                json={"name": session_name},
+                headers=headers
+            )
+            session_created = res.status_code in (200, 201, 409)
+            create_res_text = res.text
+        except Exception as e:
+            return {"success": False, "error": f"Failed to register session: {e}"}
+
+        # 2. Register n8n webhook
+        try:
+            webhook_payload = [
+                {
+                    "url": webhook_url,
+                    "events": ["message.received", "session.status"]
+                }
+            ]
+            res = await client.post(
+                f"{OPENWA_SERVICE_URL}/api/sessions/{session_name}/webhooks",
+                json=webhook_payload,
+                headers=headers
+            )
+            webhook_setup = res.status_code in (200, 201, 204)
+            webhook_res_text = res.text
+        except Exception as e:
+            return {"success": False, "error": f"Failed to configure webhooks: {e}"}
+
+        # 3. Start the session
+        try:
+            res = await client.post(
+                f"{OPENWA_SERVICE_URL}/api/sessions/{session_name}/actions/start",
+                headers=headers
+            )
+            if res.status_code == 404:
+                res = await client.post(
+                    f"{OPENWA_SERVICE_URL}/api/sessions/{session_name}/start",
+                    headers=headers
+                )
+            session_started = res.status_code in (200, 201, 204)
+            start_res_text = res.text
+        except Exception as e:
+            return {"success": False, "error": f"Failed to start session connection: {e}"}
+
+        return {
+            "success": session_created and webhook_setup and session_started,
+            "session_created": session_created,
+            "webhook_setup": webhook_setup,
+            "session_started": session_started,
+            "details": {
+                "create": create_res_text,
+                "webhook": webhook_res_text,
+                "start": start_res_text
+            }
+        }
+
+@openwa_admin.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+async def get_qr_code(session_name: str = "ananse-whatsapp") -> dict:
+    """
+    [Internal Tool] Fetches the connection pairing QR code for the WhatsApp session.
+    Returns both the base64-encoded image and instructions.
+    """
+    import base64
+    headers = {}
+    master_key = os.environ.get("OPENWA_API_KEY")
+    if master_key:
+        headers["X-API-Key"] = master_key
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            res = await client.get(
+                f"{OPENWA_SERVICE_URL}/api/sessions/{session_name}/qr",
+                headers=headers
+            )
+            if res.status_code == 200:
+                b64_data = base64.b64encode(res.content).decode("utf-8")
+                return {
+                    "success": True,
+                    "session": session_name,
+                    "qr_base64": b64_data,
+                    "markdown_image": f"data:image/png;base64,{b64_data}",
+                    "instructions": "Scan this QR code in WhatsApp -> Linked Devices to pair."
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Failed to fetch QR code: HTTP {res.status_code}",
+                    "response": res.text
+                }
+        except Exception as e:
+            return {"success": False, "error": f"Failed to get QR code: {e}"}
+
+@openwa_admin.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+async def get_pairing_code(
+    phone_number: str = "2330256012271",
+    session_name: str = "ananse-whatsapp"
+) -> dict:
+    """
+    [Internal Tool] Requests an 8-character pairing code to connect WhatsApp to the gateway phone number.
+    """
+    headers = {}
+    master_key = os.environ.get("OPENWA_API_KEY")
+    if master_key:
+        headers["X-API-Key"] = master_key
+
+    clean_phone = "".join(filter(str.isdigit, phone_number))
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            res = await client.get(
+                f"{OPENWA_SERVICE_URL}/api/sessions/{session_name}/pairing",
+                params={"phone": clean_phone},
+                headers=headers
+            )
+            if res.status_code == 200:
+                return {
+                    "success": True,
+                    "session": session_name,
+                    "phone": clean_phone,
+                    "pairing_code": res.text.strip(),
+                    "instructions": "Enter this 8-digit code in WhatsApp -> Linked Devices -> Link with Phone Number."
+                }
+
+            res = await client.post(
+                f"{OPENWA_SERVICE_URL}/api/sessions/{session_name}/pairing-code",
+                json={"phoneNumber": clean_phone},
+                headers=headers
+            )
+            if res.status_code in (200, 201):
+                try:
+                    data = res.json()
+                    pairing_code = data.get("pairingCode") or data.get("code") or res.text.strip()
+                except Exception:
+                    pairing_code = res.text.strip()
+                return {
+                    "success": True,
+                    "session": session_name,
+                    "phone": clean_phone,
+                    "pairing_code": pairing_code,
+                    "instructions": "Enter this 8-digit code in WhatsApp -> Linked Devices -> Link with Phone Number."
+                }
+            
+            return {
+                "success": False,
+                "error": f"Failed to get pairing code: HTTP {res.status_code}",
+                "details": res.text
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Failed to retrieve pairing code: {e}"}
+
+@openwa_admin.tool(tags={"admin"}, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+async def get_session_status(session_name: str = "ananse-whatsapp") -> dict:
+    """
+    [Internal Tool] Checks the current connection status of the WhatsApp session.
+    """
+    headers = {}
+    master_key = os.environ.get("OPENWA_API_KEY")
+    if master_key:
+        headers["X-API-Key"] = master_key
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            res = await client.get(
+                f"{OPENWA_SERVICE_URL}/api/sessions/{session_name}/status",
+                headers=headers
+            )
+            if res.status_code == 200:
+                return {
+                    "success": True,
+                    "session": session_name,
+                    "status": res.json() if res.headers.get("content-type", "").startswith("application/json") else res.text.strip()
+                }
+            return {
+                "success": False,
+                "error": f"Failed to get session status: HTTP {res.status_code}",
+                "response": res.text
+            }
+        except Exception as e:
+            return {"success": False, "error": f"Failed to get session status: {e}"}

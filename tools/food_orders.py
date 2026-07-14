@@ -8,45 +8,6 @@ from tools.sms import sms_send
 from payments.tools import momo_collect
 from vendors.registry import STATIC_VENDORS_LIST
 
-@mcp.tool(
-    description="Search food dishes and restaurants across available catalogs in a specified city (e.g. Accra). Currently searches verified vendors matching categories or name.",
-    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
-)
-async def search_food_menus(query: str, city: str = "accra") -> Dict[str, Any]:
-    """
-    Search food dishes and restaurants across available catalogs in a specified city (e.g. Accra).
-    Currently searches verified vendors matching categories or name.
-    """
-    try:
-        results = []
-        q_lower = query.lower()
-        
-        # Search local static vendors
-        for vendor in STATIC_VENDORS_LIST:
-            v_name = vendor.get("name", "")
-            cats = vendor.get("categories", [])
-            if q_lower in v_name.lower() or any(q_lower in c.lower() for c in cats):
-                # Skip telecom services
-                if vendor.get("vendor_type") == "internal_service":
-                    continue
-                results.append({
-                    "source": "Registered Vendor",
-                    "vendor_id": vendor.get("vendor_id"),
-                    "restaurant_name": v_name,
-                    "categories": cats,
-                    "payment_methods": vendor.get("payment_methods", [])
-                })
-                        
-        return {
-            "success": True,
-            "city": city,
-            "query": query,
-            "total_matches": len(results),
-            "matches": results
-        }
-    except Exception as e:
-        return {"success": False, "error": f"Failed to search food menus: {e}"}
-
 
 @mcp.tool(
     description="Save or update a customer profile in MongoDB, including delivery address, landmark, and default MoMo payment number.",

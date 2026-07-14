@@ -6,6 +6,7 @@ import fastmcp
 import inspect
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
+from fastmcp.client.transports.sse import SSETransport
 from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.auth.providers.auth0 import Auth0Provider
 from fastmcp.server.dependencies import get_access_token
@@ -14,7 +15,8 @@ from starlette.responses import PlainTextResponse, Response
 from starlette.routing import Route
 
 from db import _get_db
-from middleware import AdminTagMiddleware
+from middleware import AdminTagMiddleware, RoleSecurityMiddleware
+from fastmcp.server.transforms.search import BM25SearchTransform
 
 # ── Global fastmcp settings ─────────────────────────────────────────────────
 fastmcp.settings.sse_path = "/"
@@ -177,6 +179,10 @@ mcp.add_provider(SkillsDirectoryProvider(roots=skills_path, reload=True))
 
 # Enforce {'admin'} tags using JWT claims
 mcp.add_middleware(AdminTagMiddleware())
+mcp.add_middleware(RoleSecurityMiddleware())
+
+# Compress tool list and require search/call-tool for hidden tools
+mcp.add_transform(BM25SearchTransform(always_visible=["search", "get_token_info"]))
 
 # Mount general tools under "general" namespace
 mcp.mount(general, namespace="general")
@@ -191,6 +197,16 @@ kali_server_url = os.environ.get("KALI_SERVER_URL", "http://kali-server:8001/mcp
 # Since we are mounting it, we want the proxy calls to be accepted.
 kali_proxy = create_proxy(kali_server_url, name="kali-server")
 mcp.mount(kali_proxy, namespace="cybops")
+
+# Mount n8n MCP server under "n8n" namespace via proxy
+n8n_server_url = os.environ.get("N8N_MCP_SERVER_URL", "https://auto.ananselabs.org/mcp-server/http")
+n8n_headers = {}
+n8n_api_key = os.environ.get("N8N_API_KEY")
+if n8n_api_key:
+    n8n_headers["X-N8N-API-KEY"] = n8n_api_key
+n8n_transport = SSETransport(n8n_server_url, headers=n8n_headers)
+n8n_proxy = create_proxy(n8n_transport, name="n8n-server")
+mcp.mount(n8n_proxy, namespace="n8n")
 
 
 # ── Starlette middleware: header normalization + SSE session path rewrite ──
