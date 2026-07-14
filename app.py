@@ -7,8 +7,8 @@ import inspect
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
 from fastmcp.client.transports.sse import SSETransport
-from fastmcp.server.auth.auth import AccessToken, MultiAuth
-from fastmcp.server.auth.providers.jwt import JWTVerifier
+from fastmcp.server.auth import MultiAuth
+from fastmcp.server.auth.auth import AccessToken
 from fastmcp.server.auth.providers.auth0 import Auth0Provider
 from fastmcp.server.dependencies import get_access_token
 from mcp.types import ToolAnnotations
@@ -91,11 +91,62 @@ class MongoKeyValue:
         return result.deleted_count
 
 
+class HS256TokenVerifier:
+    """TokenVerifier that validates HS256 JWTs signed with a static secret.
+
+    Implements the TokenVerifier protocol expected by FastMCP's MultiAuth.
+    Uses pyjwt directly — the FastMCP JWTVerifier is JWKS/RS256-only.
+    """
+
+    def __init__(self, secret: str) -> None:
+        self._secret = secret
+
+    async def verify_token(self, token: str) -> AccessToken | None:
+        print(f"DEBUG_HS256: verifying token={repr(token[:30])}...", flush=True)
+        try:
+            payload = pyjwt.decode(token, self._secret, algorithms=["HS256"])
+        except pyjwt.ExpiredSignatureError:
+            print("DEBUG_HS256: token expired", flush=True)
+            return None
+        except pyjwt.InvalidTokenError as e:
+            print(f"DEBUG_HS256: invalid token: {e}", flush=True)
+            return None
+
+        # Normalise role claim → roles list (for RoleSecurityMiddleware)
+        role = payload.get("role") or (payload.get("roles") or ["user"])[0]
+        if isinstance(payload.get("roles"), list):
+            roles = payload["roles"]
+        else:
+            roles = [role]
+        payload["roles"] = roles
+
+        client_id = payload.get("sub") or payload.get("client_id") or "static-jwt"
+        print(f"DEBUG_HS256: valid token for client={client_id} roles={roles}", flush=True)
+        return AccessToken(
+            token=token,
+            client_id=str(client_id),
+            scopes=[],
+            claims=payload,
+        )
+
+
 # ── Auth0 provider (optional, enabled via env var) ──────────────────────────
-def _build_auth_provider() -> Auth0Provider | None:
-    """Constructs the Auth0Provider with a custom token-verification path
-    that supports static/legacy tokens alongside normal Auth0 tokens."""
+def _build_auth_provider() -> Auth0Provider | MultiAuth | None:
+    """Constructs the auth provider.
+
+    - When MCP_ENABLE_AUTH0=true: Auth0Provider for interactive OAuth clients,
+      combined with HS256TokenVerifier for machine-to-machine tokens via MultiAuth.
+    - When MCP_ROLE_TOKEN_SECRET only: standalone HS256 verifier via MultiAuth.
+    - Otherwise: None (no auth).
+    """
+    role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET", "").strip('\'\'"')
+    hs256_verifier = HS256TokenVerifier(role_secret) if role_secret else None
+
     if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() != "true":
+        if hs256_verifier:
+            # Auth0 disabled but we still have a static secret → use MultiAuth
+            # with only the HS256 verifier (no OAuth server).
+            return MultiAuth(verifiers=[hs256_verifier])
         return None
 
     auth0_domain = os.environ.get("AUTH0_DOMAIN")
@@ -116,31 +167,9 @@ def _build_auth_provider() -> Auth0Provider | None:
         client_storage=MongoKeyValue(),
     )
 
-    role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
-    if role_secret:
-        role_secret = role_secret.strip('\'"')
-
-    if role_secret:
-        class CustomJWTVerifier(JWTVerifier):
-            async def verify_token(self, token: str) -> AccessToken | None:
-                print(f"DEBUG_JWT_VERIFIER: incoming token={repr(token)}", flush=True)
-                try:
-                    res = await super().verify_token(token)
-                    if res and res.claims:
-                        role = res.claims.get("role", "user")
-                        res.claims["roles"] = [role]
-                    print(f"DEBUG_JWT_VERIFIER: validation succeeded, res={res}", flush=True)
-                    return res
-                except Exception as e:
-                    print(f"DEBUG_JWT_VERIFIER: validation failed: {e}", flush=True)
-                    raise
-
-        jwt_verifier = CustomJWTVerifier(
-            secret=role_secret,
-            algorithms=["HS256"],
-            required_scopes=[],
-        )
-        return MultiAuth(server=auth0_server, verifiers=[jwt_verifier])
+    if hs256_verifier:
+        # Auth0 handles interactive OAuth; HS256 verifier handles static tokens.
+        return MultiAuth(server=auth0_server, verifiers=[hs256_verifier])
 
     return auth0_server
 
