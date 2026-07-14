@@ -120,22 +120,7 @@ def _build_auth_provider() -> Auth0Provider | None:
     async def custom_verify_token(token: str):
         clean_token = token[7:] if token.lower().startswith("bearer ") else token
 
-        # 1. Try a locally-signed static token (HS256)
-        static_secret = os.environ.get("MCP_STATIC_TOKEN_SECRET")
-        if static_secret:
-            try:
-                payload = pyjwt.decode(clean_token, static_secret, algorithms=["HS256"])
-                return AccessToken(
-                    token=token,
-                    subject=payload.get("sub", "static-user"),
-                    client_id=payload.get("client_id", "static"),
-                    scopes=payload.get("scopes", ["openid"]),
-                    claims=payload,
-                )
-            except pyjwt.PyJWTError:
-                pass
-
-        # 1b. Try a role token (signed with MCP_ROLE_TOKEN_SECRET)
+        # 1. Try a role token (signed with MCP_ROLE_TOKEN_SECRET)
         role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
         if role_secret:
             try:
@@ -150,17 +135,6 @@ def _build_auth_provider() -> Auth0Provider | None:
                 )
             except pyjwt.PyJWTError:
                 pass
-
-        # 2. Fall back to a legacy static token (exact match, admin role)
-        static_token = os.environ.get("MCP_STATIC_TOKEN")
-        if static_token and clean_token == static_token:
-            return AccessToken(
-                token=token,
-                subject="n8n-bot",
-                client_id="n8n",
-                scopes=["openid"],
-                claims={"scope": "openid", "roles": ["admin"]},  # Legacy fallback gets admin role
-            )
 
         # 3. Fall back to normal Auth0 verification
         return await original_verify(token)
