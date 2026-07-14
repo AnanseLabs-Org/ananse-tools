@@ -82,7 +82,7 @@ def _run(cmd: list[str], timeout: int = 300) -> dict[str, Any]:
 
 # ── nmap ────────────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def nmap(
     *,
     target: str,
@@ -107,7 +107,7 @@ async def nmap(
     return _run(cmd)
 
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def gobuster(
     *,
     url: str,
@@ -131,7 +131,7 @@ async def gobuster(
 
 # ── nikto ───────────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def nikto(
     *,
     target: str,
@@ -151,7 +151,7 @@ async def nikto(
 
 # ── sqlmap ──────────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def sqlmap(
     *,
     url: str,
@@ -175,7 +175,7 @@ async def sqlmap(
 
 # ── hydra ───────────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def hydra(
     *,
     target: str,
@@ -208,7 +208,7 @@ async def hydra(
 
 # ── searchsploit ────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def searchsploit(
     *,
     search_term: str,
@@ -233,7 +233,7 @@ async def searchsploit(
 
 # ── msfconsole ──────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def msfconsole(
     *,
     resource_script: str = "",
@@ -258,7 +258,7 @@ async def msfconsole(
 
 # ── run_shell_command ───────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def run_shell_command(
     *,
     command: str,
@@ -276,7 +276,7 @@ async def run_shell_command(
 
 # ── list_skills ────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def list_skills() -> list[dict[str, Any]]:
     """
     List all active skills in the Kali server's mounted skills directory, parsing metadata from SKILL.md.
@@ -326,7 +326,7 @@ async def list_skills() -> list[dict[str, Any]]:
 
 # ── read_skill ──────────────────────────────────────────────────────────────
 
-@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def read_skill(
     *,
     name: str,
