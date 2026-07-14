@@ -4,7 +4,7 @@ from app import cybops as mcp
 from shodan import APIError
 from tools.cybops.utils import _get_client
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_dns_resolve(
     *,
     hostnames: List[str]
@@ -20,7 +20,7 @@ async def shodan_dns_resolve(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_dns_reverse(
     *,
     ips: List[str]
@@ -36,7 +36,7 @@ async def shodan_dns_reverse(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_domain_info(
     *,
     domain: str,

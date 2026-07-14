@@ -4,7 +4,7 @@ from app import cybops as mcp
 from shodan import APIError
 from tools.cybops.utils import _get_client
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_host(
     *,
     ip: str
@@ -20,7 +20,7 @@ async def shodan_host(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_info() -> Dict[str, Any]:
     """
     Retrieve information about the API plan, credits, and usage limits of the current Shodan account.
@@ -32,7 +32,7 @@ async def shodan_info() -> Dict[str, Any]:
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_honeyscore(
     *,
     ip: str
@@ -48,7 +48,7 @@ async def shodan_honeyscore(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_ports() -> List[int]:
     """
     Get a list of ports that Shodan crawls.
@@ -61,7 +61,7 @@ async def shodan_ports() -> List[int]:
         # FastMCP tools returning list is fine, let's keep it safe
         return []
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_protocols() -> Dict[str, str]:
     """
     Get a list of protocols that Shodan crawls and parses.
@@ -73,7 +73,7 @@ async def shodan_protocols() -> Dict[str, str]:
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_services() -> Dict[str, str]:
     """
     Get a list of services that Shodan parses.
@@ -85,7 +85,7 @@ async def shodan_services() -> Dict[str, str]:
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_myip() -> Dict[str, str]:
     """
     Get your current IP address as seen from the Internet.

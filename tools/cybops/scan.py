@@ -4,7 +4,7 @@ from app import cybops as mcp
 from shodan import APIError
 from tools.cybops.utils import _get_client
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def shodan_scan(
     *,
     ips: List[str],
@@ -22,7 +22,7 @@ async def shodan_scan(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_scan_status(
     *,
     scan_id: str
@@ -38,7 +38,7 @@ async def shodan_scan_status(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_scans(
     *,
     page: int = 1

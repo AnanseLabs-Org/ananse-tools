@@ -4,7 +4,7 @@ from app import cybops as mcp
 from shodan import APIError
 from tools.cybops.utils import _get_client
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True))
 async def shodan_create_alert(
     *,
     name: str,
@@ -24,7 +24,7 @@ async def shodan_create_alert(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def shodan_alerts(
     *,
     aid: str = None,
@@ -44,7 +44,7 @@ async def shodan_alerts(
     except APIError as e:
         return {"error": str(e)}
 
-@mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(task=True, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def shodan_delete_alert(
     *,
     aid: str
