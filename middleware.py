@@ -9,21 +9,21 @@ from fastmcp.server.dependencies import get_access_token, get_http_request
 
 log = logging.getLogger(__name__)
 
-def get_user_role() -> str:
+def get_user_role() -> str | None:
     """
     Extract and verify the user role from the 'X-Role-Token' header.
-    If the header is missing (or if request context is not available), defaults to 'user'.
+    If the header is missing (or if request context is not available), returns None.
     If the token is present but invalid or expired, raises a ToolError.
     """
     try:
         request = get_http_request()
     except Exception:
-        # Default to 'user' if not running in HTTP request context (e.g. stdio transport)
-        return "user"
+        # Default to None if not running in HTTP request context (e.g. stdio transport)
+        return None
 
     token_header = request.headers.get("x-role-token")
     if not token_header:
-        return "user"
+        return None
 
     secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
     if not secret:
@@ -63,17 +63,14 @@ def get_resolved_role() -> str:
     """
     Resolves the caller's role to 'admin' or 'user' by checking both
     the 'X-Role-Token' header and the OAuth token claims (OR logic).
+    If no token is provided by either method, raises a ToolError (no access).
     """
     # 1. Check X-Role-Token header
-    try:
-        role = get_user_role()
-        if role == "admin":
-            return "admin"
-    except ToolError:
-        # Re-raise token signature/expiry validation errors to reject the call immediately
-        raise
-    except Exception:
-        pass
+    role = get_user_role()
+    if role == "admin":
+        return "admin"
+    elif role == "user":
+        return "user"
 
     # 2. Check OAuth access token claims
     try:
@@ -85,10 +82,12 @@ def get_resolved_role() -> str:
                 roles = [roles]
             if "admin" in roles:
                 return "admin"
+            return "user"
     except Exception:
         pass
 
-    return "user"
+    # No token provided by either method
+    raise ToolError("Authentication required: no token provided")
 
 class RoleSecurityMiddleware(Middleware):
     """Enforce role-based access control checking both X-Role-Token and OAuth claims."""
