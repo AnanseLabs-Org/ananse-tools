@@ -118,6 +118,7 @@ def _build_auth_provider() -> Auth0Provider | None:
     original_verify = provider.verify_token
 
     async def custom_verify_token(token: str):
+        print(f"DEBUG_VERIFY: incoming token={repr(token)}", flush=True)
         clean_token = token[7:] if token.lower().startswith("bearer ") else token
 
         # 1. Try a role token (signed with MCP_ROLE_TOKEN_SECRET)
@@ -126,20 +127,35 @@ def _build_auth_provider() -> Auth0Provider | None:
             role_secret = role_secret.strip('\'"')
         if role_secret:
             try:
+                print(f"DEBUG_VERIFY: decoding with role_secret length={len(role_secret)}", flush=True)
                 payload = pyjwt.decode(clean_token, role_secret, algorithms=["HS256"])
                 role = payload.get("role", "user")
-                return AccessToken(
+                print(f"DEBUG_VERIFY: successful HS256 decode, resolved role={role}", flush=True)
+                res = AccessToken(
                     token=token,
                     subject="m2m-user",
                     client_id="m2m",
                     scopes=["openid"],
                     claims={"scope": "openid", "roles": [role]},
                 )
-            except pyjwt.PyJWTError:
-                pass
+                print(f"DEBUG_VERIFY: returning AccessToken={res}", flush=True)
+                return res
+            except pyjwt.PyJWTError as e:
+                print(f"DEBUG_VERIFY: role token decode failed: {e}", flush=True)
+            except Exception as e:
+                print(f"DEBUG_VERIFY: role token general exception: {e}", flush=True)
+        else:
+            print("DEBUG_VERIFY: role_secret is empty or None!", flush=True)
 
         # 3. Fall back to normal Auth0 verification
-        return await original_verify(token)
+        print("DEBUG_VERIFY: falling back to original Auth0 verify_token", flush=True)
+        try:
+            res = await original_verify(token)
+            print(f"DEBUG_VERIFY: original verify returned AccessToken={res}", flush=True)
+            return res
+        except Exception as e:
+            print(f"DEBUG_VERIFY: original verify raised: {e}", flush=True)
+            raise
 
     provider.verify_token = custom_verify_token
     return provider
