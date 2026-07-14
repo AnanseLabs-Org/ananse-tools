@@ -59,12 +59,43 @@ def get_user_role() -> str:
     except pyjwt.InvalidTokenError as e:
         raise ToolError(f"Invalid security token: {str(e)}")
 
+def get_resolved_role() -> str:
+    """
+    Resolves the caller's role to 'admin' or 'user' by checking both
+    the 'X-Role-Token' header and the OAuth token claims (OR logic).
+    """
+    # 1. Check X-Role-Token header
+    try:
+        role = get_user_role()
+        if role == "admin":
+            return "admin"
+    except ToolError:
+        # Re-raise token signature/expiry validation errors to reject the call immediately
+        raise
+    except Exception:
+        pass
+
+    # 2. Check OAuth access token claims
+    try:
+        token = get_access_token()
+        if token is not None:
+            claims = getattr(token, "claims", None) or {}
+            roles = claims.get("roles", [])
+            if isinstance(roles, str):
+                roles = [roles]
+            if "admin" in roles:
+                return "admin"
+    except Exception:
+        pass
+
+    return "user"
+
 class RoleSecurityMiddleware(Middleware):
-    """Enforce X-Role-Token role-based access control for all tools."""
+    """Enforce role-based access control checking both X-Role-Token and OAuth claims."""
 
     async def on_list_tools(self, context: MiddlewareContext, call_next):
         tools = await call_next(context)
-        role = get_user_role()
+        role = get_resolved_role()
         if role == "admin":
             return tools
         # Filter out admin-tagged tools for non-admins
@@ -72,7 +103,7 @@ class RoleSecurityMiddleware(Middleware):
         return filtered
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
-        role = get_user_role()
+        role = get_resolved_role()
         if role != "admin":
             if context.fastmcp_context:
                 try:
@@ -88,41 +119,10 @@ class RoleSecurityMiddleware(Middleware):
         return await call_next(context)
 
 class AdminTagMiddleware(Middleware):
-    """Block tools tagged {'admin'} unless the JWT contains role 'admin'."""
-
-    async def on_list_tools(self, context: MiddlewareContext, call_next):
-        tools = await call_next(context)
-        token = get_access_token()
-        if _is_admin(token):
-            return tools
-        # Filter out admin-tagged tools for non-admins
-        filtered = [t for t in tools if "admin" not in (getattr(t, "tags", None) or set())]
-        return filtered
-
-    async def on_call_tool(self, context: MiddlewareContext, call_next):
-        if context.fastmcp_context:
-            try:
-                tool = await context.fastmcp_context.fastmcp.get_tool(context.message.name)
-                tags = getattr(tool, "tags", None) or set()
-                if "admin" in tags:
-                    token = get_access_token()
-                    if not _is_admin(token):
-                        raise ToolError("Access denied: admin privileges required")
-            except ToolError:
-                raise
-            except Exception as e:
-                # Let execution handle missing tools
-                log.warning("Error checking tags for tool %s: %s", context.message.name, e)
+    """Legacy middleware: role checking is now handled by RoleSecurityMiddleware."""
+    async def on_list_tools(self, context, call_next):
+        return await call_next(context)
+    async def on_call_tool(self, context, call_next):
         return await call_next(context)
 
-def _is_admin(token) -> bool:
-    if token is None:
-        return False
-    
-    # Check roles claim in JWT
-    claims = getattr(token, "claims", None) or {}
-    roles = claims.get("roles", [])
-    if isinstance(roles, str):
-        roles = [roles]
-    return "admin" in roles
 

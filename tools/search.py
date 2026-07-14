@@ -136,7 +136,7 @@ async def rebuild_semantic_index() -> int:
 
 from mcp.types import ToolAnnotations
 from app import general as mcp
-from middleware import get_user_role
+from middleware import get_resolved_role
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def search(
@@ -167,7 +167,7 @@ async def search(
         }
 
     # 3. Resolve user role to filter results
-    role = get_user_role()
+    role = get_resolved_role()
 
     # --- DOMAIN A: MCP Tools ---
     matched_tools = []
