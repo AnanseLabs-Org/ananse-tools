@@ -238,6 +238,17 @@ class SSESessionRewriteMiddleware:
 
             scope["headers"] = list(headers.items())
 
+            headers_dict = {
+                k.decode("utf-8", errors="ignore"): v.decode("utf-8", errors="ignore")
+                for k, v in scope.get("headers", [])
+            }
+            print(
+                f"DEBUG_HTTP: method={method} path={path} "
+                f"query_string={scope.get('query_string', b'').decode('utf-8')} "
+                f"headers={headers_dict}",
+                flush=True,
+            )
+
             if method == "GET":
                 # Normalize openid-configuration to oauth-authorization-server
                 if ".well-known/openid-configuration" in path:
@@ -246,17 +257,6 @@ class SSESessionRewriteMiddleware:
             elif method == "POST":
                 if path == "/":
                     scope["path"] = "/messages/"
-                if "messages" in path:
-                    headers_dict = {
-                        k.decode("utf-8", errors="ignore"): v.decode("utf-8", errors="ignore")
-                        for k, v in scope.get("headers", [])
-                    }
-                    print(
-                        f"DEBUG_POST: path={path} "
-                        f"query_string={scope.get('query_string', b'').decode('utf-8')} "
-                        f"headers={headers_dict}",
-                        flush=True,
-                    )
 
         await self.app(scope, receive, send)
 
