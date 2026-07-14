@@ -135,6 +135,22 @@ def _build_auth_provider() -> Auth0Provider | None:
             except pyjwt.PyJWTError:
                 pass
 
+        # 1b. Try a role token (signed with MCP_ROLE_TOKEN_SECRET)
+        role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET")
+        if role_secret:
+            try:
+                payload = pyjwt.decode(clean_token, role_secret, algorithms=["HS256"])
+                role = payload.get("role", "user")
+                return AccessToken(
+                    token=token,
+                    subject="m2m-user",
+                    client_id="m2m",
+                    scopes=["openid"],
+                    claims={"scope": "openid", "roles": [role]},
+                )
+            except pyjwt.PyJWTError:
+                pass
+
         # 2. Fall back to a legacy static token (exact match, admin role)
         static_token = os.environ.get("MCP_STATIC_TOKEN")
         if static_token and clean_token == static_token:
@@ -222,6 +238,15 @@ class SSESessionRewriteMiddleware:
             path = scope["path"]
             method = scope["method"]
             headers = dict(scope["headers"])
+
+            # Convert x-role-token case-insensitively to Authorization: Bearer
+            role_token = None
+            for k, v in headers.items():
+                if k.lower() == b"x-role-token":
+                    role_token = v
+                    break
+            if role_token:
+                headers[b"authorization"] = b"Bearer " + role_token
 
             # Convert x-api-key to Authorization: Bearer
             x_api_key = headers.get(b"x-api-key")
