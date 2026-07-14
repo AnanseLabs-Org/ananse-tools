@@ -7,7 +7,8 @@ import inspect
 from fastmcp import FastMCP
 from fastmcp.server import create_proxy
 from fastmcp.client.transports.sse import SSETransport
-from fastmcp.server.auth.auth import AccessToken, MultiAuth, JWTVerifier
+from fastmcp.server.auth.auth import AccessToken, MultiAuth
+from fastmcp.server.auth.providers.jwt import JWTVerifier
 from fastmcp.server.auth.providers.auth0 import Auth0Provider
 from fastmcp.server.dependencies import get_access_token
 from mcp.types import ToolAnnotations
