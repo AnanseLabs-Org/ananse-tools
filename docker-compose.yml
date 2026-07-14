@@ -272,6 +272,18 @@ services:
     ports:
       - "8080:8080"
 
+  cloudflared-keycloak:
+    container_name: hst-ananselabs-keycloak-cloudflared
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${KEYCLOAK_CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - default
+    depends_on:
+      - keycloak
+
   # ===== LOCAL SEMANTIC SEARCH: Ollama =====
   ollama:
     container_name: hst-ananselabs-tools-ollama
