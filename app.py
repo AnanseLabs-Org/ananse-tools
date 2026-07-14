@@ -133,6 +133,20 @@ def _challenge_endpoint(request):
         )
     return PlainTextResponse(token)
 
+from starlette.responses import JSONResponse
+
+def _oauth_metadata(request):
+    """Serves the OAuth authorization server metadata pointing to Keycloak."""
+    return JSONResponse({
+        "issuer": _keycloak_realm_url,
+        "authorization_endpoint": f"{_keycloak_realm_url}/protocol/openid-connect/auth",
+        "token_endpoint": f"{_keycloak_realm_url}/protocol/openid-connect/token",
+        "jwks_uri": f"{_keycloak_realm_url}/protocol/openid-connect/certs",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code", "client_credentials"],
+        "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post"],
+    })
+
 
 def _with_challenge_route(app):
     """Adds the challenge route to a Starlette app if it isn't already present."""
@@ -144,6 +158,20 @@ def _with_challenge_route(app):
         app.routes.append(
             Route("/.well-known/openai-apps-challenge", endpoint=_challenge_endpoint, methods=["GET"])
         )
+    
+    has_oauth_metadata = any(
+        getattr(route, "path", None) == "/.well-known/oauth-authorization-server"
+        for route in app.routes
+    )
+    if not has_oauth_metadata:
+        app.routes.append(
+            Route("/.well-known/oauth-authorization-server", endpoint=_oauth_metadata, methods=["GET"])
+        )
+        # Also map openid-configuration just in case
+        app.routes.append(
+            Route("/.well-known/openid-configuration", endpoint=_oauth_metadata, methods=["GET"])
+        )
+
     return app
 
 
