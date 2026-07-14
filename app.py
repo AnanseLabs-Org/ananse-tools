@@ -90,34 +90,31 @@ class MongoKeyValue:
         return result.deleted_count
 
 
-# ── Auth provider builder ────────────────────────────────────────────────
+# ── Auth provider builder ────────────────────────────────────────────────────
 def _build_auth_provider():
     """Builds the FastMCP auth provider.
 
-    - MCP_ENABLE_AUTH0=true + MCP_ROLE_TOKEN_SECRET set:
-        MultiAuth(OAuthProxy for interactive users + JWTVerifier HS256 for M2M)
-    - MCP_ENABLE_AUTH0=true only:
-        OAuthProxy only
-    - MCP_ROLE_TOKEN_SECRET only:
-        JWTVerifier HS256 only (no OAuth server)
-    - Neither:
-        None (open server)
+    Priority logic:
+    - MCP_ROLE_TOKEN_SECRET set  → JWTVerifier(HS256) is the primary auth provider.
+      OAuthProxy is NOT used because its verify_token() returns None (not raises)
+      for unknown tokens, which prevents MultiAuth from falling through to the
+      JWTVerifier. For M2M access, JWTVerifier alone is correct.
+    - MCP_ENABLE_AUTH0=true, no secret → OAuthProxy for interactive OAuth flows.
+    - Neither → None (open server, rely on RoleSecurityMiddleware only).
     """
     role_secret = os.environ.get("MCP_ROLE_TOKEN_SECRET", "").strip('\'"')
-    hs256_verifier = (
-        JWTVerifier(
+    if role_secret:
+        # JWTVerifier handles all token validation (HS256 static secret).
+        # It is a full AuthProvider so it can be used directly as auth=.
+        return JWTVerifier(
             public_key=role_secret,
             algorithm="HS256",
-            # No issuer/audience check — our internal tokens omit these
-            required_scopes=[],
+            required_scopes=[],  # our tokens have no scope claims
         )
-        if role_secret
-        else None
-    )
 
+    # No static secret — use Auth0 interactive OAuth if configured
     if os.environ.get("MCP_ENABLE_AUTH0", "false").lower() != "true":
-        # Auth0 disabled — use only the HS256 verifier if available
-        return hs256_verifier
+        return None
 
     auth0_domain = os.environ.get("AUTH0_DOMAIN")
     auth0_client_id = os.environ.get("AUTH0_CLIENT_ID")
@@ -125,20 +122,17 @@ def _build_auth_provider():
     public_url = os.environ.get("MCP_PUBLIC_URL")
 
     if not all([auth0_domain, auth0_client_id, auth0_client_secret, public_url]):
-        raise RuntimeError("Missing required Auth0 env vars (AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, MCP_PUBLIC_URL)")
+        raise RuntimeError(
+            "Missing required Auth0 env vars: AUTH0_DOMAIN, AUTH0_CLIENT_ID, "
+            "AUTH0_CLIENT_SECRET, MCP_PUBLIC_URL"
+        )
 
-    oauth_proxy = OAuthProxy(
+    return OAuthProxy(
         issuer_url=f"https://{auth0_domain}/.well-known/openid-configuration",
         client_id=auth0_client_id,
         client_secret=auth0_client_secret,
         base_url=public_url,
     )
-
-    if hs256_verifier:
-        # Both: interactive OAuth users + M2M static-secret tokens
-        return MultiAuth(server=oauth_proxy, verifiers=[hs256_verifier])
-
-    return oauth_proxy
 
 
 auth_provider = _build_auth_provider()
