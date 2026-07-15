@@ -29,7 +29,12 @@ async def _call_api(
                 params=params
             )
             response.raise_for_status()
-            return response.json()
+            if not response.text.strip():
+                return {"success": True}
+            try:
+                return response.json()
+            except Exception:
+                return {"success": True, "raw_response": response.text}
         except httpx.HTTPStatusError as e:
             try:
                 error_detail = e.response.json()
