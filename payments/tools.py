@@ -20,7 +20,7 @@ async def momo_collect(
     :param amount: Amount to collect in GHS.
     :param phone_number: Customer's MoMo phone number.
     :param network: Customer's mobile network ('MTN', 'TELECEL', 'AIRTELTIGO').
-    :param transaction_id: Unique transaction reference.
+    :param transaction_id: Unique transaction reference. MUST be at least 12 characters long (e.g. use a UUID or a long random string).
     :param callback_url: Webhook URL to send payment updates to.
     :param reference: Label/reference displayed on customer's approval screen.
     """
