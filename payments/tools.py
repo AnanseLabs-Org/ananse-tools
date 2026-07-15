@@ -5,7 +5,7 @@ from http_client import _call_api
 from auth import _get_payment_bearer_token
 from payments.helpers import _fetch_payment_history, _find_payment_history_match, _is_not_found_response, _payment_status_from_record
 
-@mcp.tool(tags={"role:payments_admin"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
+@mcp.tool(tags={"role:payments_user"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
 async def momo_collect(
     *,
     amount: float,
