@@ -104,9 +104,14 @@ class SSESessionRewriteMiddleware:
             method = scope["method"]
 
             if method == "GET":
-                # Normalize openid-configuration to oauth-authorization-server
-                if ".well-known/openid-configuration" in path:
-                    scope["path"] = "/.well-known/oauth-authorization-server"
+                if path == "/.well-known/openai-apps-challenge":
+                    response = _challenge_endpoint(None)
+                    await response(scope, receive, send)
+                    return
+                if path in ("/.well-known/oauth-authorization-server", "/.well-known/openid-configuration"):
+                    response = _oauth_metadata(None)
+                    await response(scope, receive, send)
+                    return
 
             elif method == "POST":
                 if path == "/":
