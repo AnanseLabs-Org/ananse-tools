@@ -2,7 +2,7 @@ import asyncio
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 from http_client import _call_api
-from auth import _get_payment_bearer_token
+from auth import _get_payment_bearer_token, _get_default_callback_url
 
 def _is_successful_payment_status(payload: Any) -> bool:
     """Detect success from a payment status payload."""
@@ -172,9 +172,8 @@ async def _collect_then_execute(
         "phone_number": phone_number,
         "network": network,
         "transaction_id": resolved_transaction_id,
+        "callback_url": callback_url or _get_default_callback_url(),
     }
-    if callback_url:
-        collection_payload["callback_url"] = callback_url
     if reference:
         collection_payload["reference"] = reference
 

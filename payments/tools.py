@@ -2,7 +2,7 @@ from mcp.types import ToolAnnotations
 from typing import Any, Dict, Optional
 from app import general as mcp
 from http_client import _call_api
-from auth import _get_payment_bearer_token
+from auth import _get_payment_bearer_token, _get_default_callback_url
 from payments.helpers import _fetch_payment_history, _find_payment_history_match, _is_not_found_response, _payment_status_from_record
 
 @mcp.tool(tags={"role:payments_user"}, annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=True))
@@ -28,10 +28,9 @@ async def momo_collect(
         "amount": amount,
         "phone_number": phone_number,
         "network": network,
-        "transaction_id": transaction_id
+        "transaction_id": transaction_id,
+        "callback_url": callback_url or _get_default_callback_url()
     }
-    if callback_url:
-        data["callback_url"] = callback_url
     if reference:
         data["reference"] = reference
     return await _call_api( "POST", "/payment-api/momopay", json_data=data)
@@ -130,8 +129,7 @@ async def momo_disburse(
         "amount": amount,
         "phone_number": phone_number,
         "network": network,
-        "transaction_id": transaction_id
+        "transaction_id": transaction_id,
+        "callback_url": callback_url or _get_default_callback_url()
     }
-    if callback_url:
-        data["callback_url"] = callback_url
     return await _call_api( "POST", "/payment-api/disburse", json_data=data)

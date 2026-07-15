@@ -24,3 +24,12 @@ def _get_default_customer_name() -> str:
         or os.environ.get("BULKCLIX_CUSTOMER_NAME")
         or "BulkClix Customer"
     )
+
+
+def _get_default_callback_url() -> str:
+    """Resolve a default callback URL for MoMo transactions, required by BulkClix."""
+    return (
+        os.environ.get("BULKCLIX_CALLBACK_URL")
+        or "https://webhook.site/422f6a65-71eb-482c-a673-0ad3ecae8efc"
+    )
+
