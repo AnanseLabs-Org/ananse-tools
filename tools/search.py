@@ -136,7 +136,7 @@ async def rebuild_semantic_index() -> int:
 
 from mcp.types import ToolAnnotations
 from app import general as mcp
-from middleware import get_resolved_role
+from middleware import _get_caller_roles
 
 @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True))
 async def search(
@@ -167,7 +167,7 @@ async def search(
         }
 
     # 3. Resolve user role to filter results
-    role = get_resolved_role()
+    caller_roles = _get_caller_roles()
 
     # --- DOMAIN A: MCP Tools ---
     matched_tools = []
@@ -192,7 +192,7 @@ async def search(
                 
                 # Enforce security role check on search results
                 tags = getattr(tool, "tags", None) or set()
-                if role != "admin" and "admin" in tags:
+                if "admin" not in caller_roles and "admin" in tags:
                     continue
 
                 desc = getattr(tool, "description", "") or ""
