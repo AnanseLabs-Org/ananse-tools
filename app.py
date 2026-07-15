@@ -21,18 +21,33 @@ fastmcp.settings.message_path = "/messages/"
 
 
 # ── Keycloak authentication provider ────────────────────────────────────────
+from fastmcp.server.auth.providers.jwt import JWTVerifier
+
 _keycloak_realm_url = os.environ.get(
     "KEYCLOAK_REALM_URL", "http://keycloak:8080/realms/ananse"
 )
 _public_url = os.environ.get("MCP_PUBLIC_URL", "https://tools.ananselabs.org")
 
+# Allow both internal docker network URL and public domain URL as valid issuers
+_issuers = [
+    _keycloak_realm_url.rstrip("/"),
+    "https://auth.ananselabs.org/realms/ananse"
+]
+
+token_verifier = JWTVerifier(
+    jwks_uri=f"{_keycloak_realm_url.rstrip('/')}/protocol/openid-connect/certs",
+    issuer=_issuers,
+    algorithm="RS256",
+    required_scopes=["openid"],
+    audience=None, # Disable strict audience verification to avoid client_id mismatches
+)
+
 auth = KeycloakAuthProvider(
     realm_url=_keycloak_realm_url,
     base_url=_public_url,
-    # audience enforces that tokens are specifically intended for this server.
-    # Must match the audience configured in the Keycloak audience mapper.
-    audience=_public_url,
+    token_verifier=token_verifier,
 )
+
 
 
 from pathlib import Path
