@@ -6,7 +6,6 @@ from app import general as mcp
 from db import _get_db
 from tools.sms import sms_send
 from payments.tools import momo_collect
-from vendors.registry import STATIC_VENDORS_LIST
 
 
 @mcp.tool(

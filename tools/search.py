@@ -2,7 +2,7 @@ import os
 import math
 import httpx
 from typing import List, Dict, Any, Optional
-from vendors.registry import STATIC_VENDORS_LIST, _lookup_vendor, _public_vendor_view
+from vendors.registry import get_all_vendors, get_vendor_provider, _lookup_vendor, _public_vendor_view
 from http_client import _call_vendor_api
 from vendors.menu import _flatten_menu
 
@@ -80,8 +80,9 @@ async def rebuild_semantic_index() -> int:
     
     new_index = []
     
-    # 1. Gather all food vendors
-    food_vendors = [v for v in STATIC_VENDORS_LIST if v.get("vendor_type") == "food_merchant"]
+    # 1. Gather all active vendors
+    vendors = await get_all_vendors()
+    food_vendors = [v for v in vendors if v.get("vendor_type") in ("food_merchant", "external_api", "shopify")]
     
     # 2. Gather all menu items
     all_items = []
@@ -90,9 +91,9 @@ async def rebuild_semantic_index() -> int:
         v_name = vendor["name"]
         
         try:
-            raw_response = await _call_vendor_api("GET", vendor["menu_url"])
-            if isinstance(raw_response, list):
-                items = _flatten_menu(raw_response)
+            provider = await get_vendor_provider(v_id)
+            if provider:
+                items = await provider.get_menu()
                 for item in items:
                     item["vendor_id"] = v_id
                     item["vendor_name"] = v_name
@@ -217,8 +218,9 @@ async def search(
     # --- DOMAIN B: Vendors ---
     matched_vendors = []
     try:
+        vendors = await get_all_vendors()
         vendor_texts = []
-        for v in STATIC_VENDORS_LIST:
+        for v in vendors:
             cats = ", ".join(v.get("categories", []))
             desc = v.get("description", "") or v.get("notes", "") or ""
             text = f"{v['name']} ({cats}). {desc}".strip()
@@ -226,7 +228,7 @@ async def search(
             
         if vendor_texts:
             vendor_embeddings = await _get_embeddings(vendor_texts)
-            for v, vec in zip(STATIC_VENDORS_LIST, vendor_embeddings):
+            for v, vec in zip(vendors, vendor_embeddings):
                 similarity = _cosine_similarity(query_vector, vec)
                 if similarity > 0.30:
                     v_copy = _public_vendor_view(v)
