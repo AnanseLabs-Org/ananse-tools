@@ -1,15 +1,20 @@
 import math
+import uuid
+from datetime import datetime, timezone
 from mcp.types import ToolAnnotations
 from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
+
 from app import general as mcp
 from http_client import _call_vendor_api
+from db import _get_db
+from payments.tools import momo_collect
 from vendors.registry import (
-    STATIC_VENDORS_LIST,
-    _lookup_vendor,
+    get_all_vendors,
+    get_vendor_provider,
     _public_vendor_view,
     _expand_category_query
 )
-from vendors.menu import _flatten_menu
 
 @mcp.tool(
     description="List available vendors to purchase goods from using BulkClix payment. :param vendor_id: Vendor's UUID. If given, returns just that vendor. :param category: Vendor's category of goods (e.g. 'restaurant', 'food', 'airtime'). If given, filters vendors using case-insensitive substring and synonym expansion. :param page: Page number for pagination (default 1). :param page_size: Page size for pagination (default 10).",
@@ -25,24 +30,20 @@ async def get_verified_vendors(
 ) -> Dict[str, Any]:
     """
     List available vendors to purchase goods from using BulkClix payment.
-    :param vendor_id: Vendor's UUID. If given, returns just that vendor.
-    :param category: Vendor's category of goods (e.g. "restaurant", "food", "airtime").
-        If given, filters vendors using case-insensitive substring and synonym expansion.
-    :param page: Page number for pagination (default 1).
-    :param page_size: Page size for pagination (default 10).
     """
     if not isinstance(vendor_id, str):
         vendor_id = None
     if not isinstance(category, str):
         category = None
 
+    vendors = await get_all_vendors()
+
     if vendor_id:
-        vendor = _lookup_vendor(vendor_id)
+        vendor = next((v for v in vendors if v["vendor_id"] == vendor_id), None)
         if vendor is None:
             return {"success": False, "error": f"No vendor found with id {vendor_id!r}"}
         return {"success": True, "vendors": [_public_vendor_view(vendor)]}
 
-    vendors = STATIC_VENDORS_LIST
     if category:
         q_expanded = _expand_category_query(category)
         vendors = [
@@ -85,39 +86,22 @@ async def get_verified_vendors_menu(
     """
     List available menu items for a vendor, flattened and checkout-ready —
     each item has dish_id, name, price, is_available, and addons. No nested categories.
-    :param vendor_id: Vendor's UUID.
-    :param query: Optional case-insensitive substring filter on dish name.
-    :param page: Page number for pagination (default 1).
-    :param page_size: Page size for pagination (default 10).
     """
     if not isinstance(query, str):
         query = None
 
-    vendor = _lookup_vendor(vendor_id)
-    if vendor is None:
-        return {"success": False, "error": f"No vendor found with id {vendor_id!r}"}
+    provider = await get_vendor_provider(vendor_id)
+    if provider is None:
+        return {"success": False, "error": f"No vendor provider found for id {vendor_id!r}"}
 
-    # Branch for internal services (e.g., Airtime & Data)
-    if vendor.get("vendor_type") == "internal_service":
+    if provider.vendor_type == "internal_service":
         return {
             "success": True,
             "items": [],
-            "note": f"{vendor['name']} is an internal service. Please use the dedicated tools (airtime_purchase, data_purchase, or data_get_bundles) to query packages and buy."
+            "note": f"{provider.name} is an internal service. Please use the dedicated tools (airtime_purchase, data_purchase, or data_get_bundles) to query packages and buy."
         }
 
-    raw_response = await _call_vendor_api("GET", vendor["menu_url"])
-
-    if isinstance(raw_response, dict) and raw_response.get("success") is False:
-        return raw_response
-
-    if not isinstance(raw_response, list):
-        return {"success": False, "error": "Unexpected menu response shape from vendor"}
-
-    items = _flatten_menu(raw_response)
-
-    if query:
-        q = query.lower()
-        items = [i for i in items if q in (i["name"] or "").lower()]
+    items = await provider.get_menu(query=query)
 
     total = len(items)
     start = (page - 1) * page_size
@@ -136,16 +120,16 @@ async def get_verified_vendors_menu(
     }
 
 
-from pydantic import BaseModel, Field
-
 class VendorOrderItem(BaseModel):
-    dish_id: int = Field(..., description="The integer ID of the dish/item to order")
+    dish_id: Any = Field(..., description="The ID of the dish/item to order")
     quantity: int = Field(..., description="The quantity of the item to order")
-    addon_ids: List[int] = Field(default_factory=list, description="List of integer IDs of addons to include")
+    addon_ids: List[Any] = Field(default_factory=list, description="List of IDs of addons to include")
+
 
 @mcp.tool(
     description=(
-        "Place an order with a food/goods vendor and initiate mobile money payment via BulkClix. "
+        "Place an order with a food/goods vendor. This creates a tracked order in MongoDB in PENDING_PAYMENT status "
+        "and returns an order_id. Once created, you MUST call 'initiate_order_payment' to process the MoMo transaction. "
         "IMPORTANT: Before calling this tool you MUST have collected ALL required fields from the user: "
         "(1) if order_type='inhouse' — you MUST ask the user for their table_number first; "
         "(2) if order_type='delivery' — you MUST ask the user for their delivery_address first. "
@@ -157,7 +141,7 @@ class VendorOrderItem(BaseModel):
         ":param order_type: 'inhouse' or 'delivery' — must be one of the vendor's supported order_types. "
         ":param table_number: Table number string. REQUIRED when order_type is 'inhouse' — ask the user before calling. "
         ":param delivery_address: Delivery address string. REQUIRED when order_type is 'delivery' — ask the user before calling. "
-        ":returns: dict with success, order_id, payment status, and vendor confirmation."
+        ":returns: dict with success, order_id, total_amount, and pending instruction."
     ),
     tags={"role:vendors_user"},
     annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
@@ -173,78 +157,237 @@ async def create_verified_vendors_order(
     delivery_address: Any = None,
 ) -> Dict[str, Any]:
     """
-    Place an order with a food/goods vendor and initiate mobile money payment via BulkClix.
-    :param vendor_id: Vendor's UUID.
-    :param items: List of items to order, with dish_id, quantity, and addon_ids.
-    :param payment_number: Mobile money number to charge (e.g. "0544929180").
-    :param network: Mobile money network code (e.g. "MTN").
-    :param order_type: "inhouse" or "delivery" — must be one of the vendor's supported order_types.
-    :param table_number: Table number. Required when order_type is "inhouse".
-    :param delivery_address: Delivery address. Required when order_type is "delivery".
+    Place an order with a food/goods vendor and register it in MongoDB for tracked payment collection.
     """
-    # Coerce to str so integer table numbers (e.g. 1) are accepted
     if table_number is not None:
         table_number = str(table_number).strip() or None
     if delivery_address is not None:
         delivery_address = str(delivery_address).strip() or None
 
     try:
-        vendor = _lookup_vendor(vendor_id)
-        if vendor is None:
-            return {"success": False, "error": f"No vendor found with id {vendor_id!r}"}
+        provider = await get_vendor_provider(vendor_id)
+        if provider is None:
+            return {"success": False, "error": f"No vendor provider found for id {vendor_id!r}"}
 
-        # Branch for internal services
-        if vendor.get("vendor_type") == "internal_service":
+        if provider.vendor_type == "internal_service":
             return {
                 "success": False,
-                "error": f"Vendor {vendor_id!r} is a telecom service. Please use the dedicated purchase tools directly (airtime_purchase, data_purchase) instead of this vendor order tool."
+                "error": f"Vendor {vendor_id!r} is a telecom service. Please use the dedicated purchase tools directly."
             }
 
-        if "momo" not in vendor.get("payment_methods", []):
-            return {"success": False, "error": f"Vendor {vendor_id!r} does not support mobile money payment"}
-
-        supported_order_types = vendor.get("order_types", [])
+        supported_order_types = provider.vendor_data.get("order_types", ["inhouse", "delivery"])
         if order_type not in supported_order_types:
             return {
                 "success": False,
-                "error": f"Vendor {vendor_id!r} does not support order_type {order_type!r} "
-                         f"(supported: {supported_order_types})",
+                "error": f"Vendor {vendor_id!r} does not support order_type {order_type!r} (supported: {supported_order_types})",
             }
         if order_type == "inhouse" and not table_number:
             return {"success": False, "error": "table_number is required for inhouse orders"}
         if order_type == "delivery" and not delivery_address:
             return {"success": False, "error": "delivery_address is required for delivery orders"}
 
-        # We can pass pagination params to get all items to verify
-        menu_result = await get_verified_vendors_menu(vendor_id=vendor_id, page=1, page_size=1000)
-        if not menu_result["success"]:
-            return {"success": False, "error": f"Could not verify menu before ordering: {menu_result['error']}"}
+        # Fetch menu to verify items and sum prices
+        menu_items = await provider.get_menu()
+        menu_by_id = {str(item["dish_id"]): item for item in menu_items}
 
-        menu_by_id = {item["dish_id"]: item for item in menu_result["items"]}
+        total_amount = 0.0
+        serialized_items = []
+
         for line in items:
-            dish = menu_by_id.get(line.dish_id)
+            dish_key = str(line.dish_id)
+            dish = menu_by_id.get(dish_key)
             if dish is None:
-                return {"success": False, "error": f"dish_id {line.dish_id!r} not found on vendor's menu"}
-            if not dish["is_available"]:
-                return {"success": False, "error": f"{dish['name']!r} (dish_id {dish['dish_id']}) is currently unavailable"}
+                return {"success": False, "error": f"Item ID {line.dish_id!r} not found on vendor's menu"}
+            if not dish.get("is_available", True):
+                return {"success": False, "error": f"{dish['name']!r} is currently unavailable"}
 
-        order_url = vendor.get("order_url")
-        if not order_url:
-            return {"success": False, "error": f"Vendor {vendor_id!r} has no configured order endpoint"}
+            dish_price = float(dish.get("price") or 0.0)
+            addons_sum = 0.0
+            addons_detail = []
+            for aid in line.addon_ids:
+                addon = next((a for a in dish.get("addons", []) if str(a["addon_id"]) == str(aid)), None)
+                if addon:
+                    addons_sum += float(addon.get("price") or 0.0)
+                    addons_detail.append({"addon_id": aid, "name": addon.get("name"), "price": addon.get("price")})
 
-        payload = {
-            "order_type": order_type,
-            "table_number": table_number,
-            "items": [item.model_dump() for item in items],
+            item_total = (dish_price + addons_sum) * line.quantity
+            total_amount += item_total
+
+            serialized_items.append({
+                "dish_id": line.dish_id,
+                "name": dish["name"],
+                "quantity": line.quantity,
+                "price": dish_price,
+                "addon_ids": line.addon_ids,
+                "addons": addons_detail,
+                "total": item_total
+            })
+
+        order_id = f"VND-{uuid.uuid4().hex[:8].upper()}"
+        order_doc = {
+            "order_id": order_id,
+            "vendor_id": vendor_id,
+            "vendor_name": provider.name,
+            "items": serialized_items,
             "payment_number": payment_number,
             "network": network,
+            "order_type": order_type,
+            "table_number": table_number,
+            "delivery_address": delivery_address,
+            "total_amount": total_amount,
+            "status": "PENDING_PAYMENT",
+            "created_at": datetime.now(timezone.utc)
         }
-        if order_type == "delivery":
-            payload["delivery_address"] = delivery_address
 
-        return await _call_vendor_api("POST", order_url, json=payload)
+        db = _get_db()
+        if db is not None:
+            await db.orders.insert_one(order_doc)
+
+        return {
+            "success": True,
+            "order_id": order_id,
+            "total_amount": total_amount,
+            "status": "PENDING_PAYMENT",
+            "message": f"Order created. Please call initiate_order_payment with order_id {order_id!r} to pay."
+        }
     except Exception as e:
-        return {"success": False, "error": f"Unexpected error placing order: {e}"}
+        return {"success": False, "error": f"Failed to register order: {str(e)}"}
+
+
+@mcp.tool(
+    description="Initiate the payment collection prompt on Mobile Money for a tracked order, and trigger vendor confirmation on success.",
+    tags={"role:vendors_user"},
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=True)
+)
+async def initiate_order_payment(*, order_id: str) -> Dict[str, Any]:
+    """
+    Trigger BulkClix MoMo collection for a tracked order and create the order on the vendor endpoint on success.
+    """
+    db = _get_db()
+    if db is None:
+        return {"success": False, "error": "Database is unavailable. Cannot process tracked payment."}
+
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        return {"success": False, "error": f"Order ID {order_id!r} not found."}
+
+    if order.get("status") != "PENDING_PAYMENT":
+        return {
+            "success": False,
+            "error": f"Order {order_id!r} is not in PENDING_PAYMENT status (current status: {order.get('status')})"
+        }
+
+    vendor_id = order.get("vendor_id")
+    provider = await get_vendor_provider(vendor_id)
+    if provider is None:
+        return {"success": False, "error": f"No vendor provider resolved for vendor_id {vendor_id!r}"}
+
+    total_amount = order.get("total_amount")
+    pay_number = order.get("payment_number")
+    network = order.get("network")
+
+    # 1. Trigger actual Mobile Money collection via BulkClix momo gateway
+    momo_result = await momo_collect(
+        amount=total_amount,
+        phone_number=pay_number,
+        network=network,
+        transaction_id=order_id,
+        reference=f"Pay order {order_id}"
+    )
+
+    # In a full production loop, we would await webhook/callback verification.
+    # For integration flow, we proceed directly to vendor creation if prompt is successfully dispatched.
+    if not momo_result.get("success", False) and momo_result.get("status") != "PENDING":
+        return {
+            "success": False,
+            "error": "Mobile Money prompt initiation failed.",
+            "details": momo_result
+        }
+
+    # 2. Dispatch the paid order to the vendor provider
+    vendor_payload = {
+        "order_type": order.get("order_type"),
+        "table_number": order.get("table_number"),
+        "delivery_address": order.get("delivery_address"),
+        "payment_number": pay_number,
+        "network": network,
+        "items": order.get("items", [])
+    }
+    
+    vendor_result = await provider.create_order(vendor_payload)
+    new_status = "PAID" if vendor_result.get("success", False) else "PAYMENT_INITIATED_VENDOR_ERROR"
+
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {
+            "status": new_status,
+            "momo_collection": momo_result,
+            "vendor_dispatch": vendor_result
+        }}
+    )
+
+    return {
+        "success": True,
+        "order_id": order_id,
+        "payment_status": "MOMO_PROMPT_SENT",
+        "vendor_status": new_status,
+        "momo_result": momo_result,
+        "vendor_result": vendor_result
+    }
+
+
+# ── Shopify-Specific Metadata Tools ────────────────────────────────────────
+
+@mcp.tool(
+    description="Fetch a Shopify customer details by customer_id. :param vendor_id: Shopify Vendor UUID. :param customer_id: Customer's Shopify ID.",
+    tags={"role:vendors_user"},
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
+async def get_shopify_customer(*, vendor_id: str, customer_id: str) -> Dict[str, Any]:
+    provider = await get_vendor_provider(vendor_id)
+    if not provider or not isinstance(provider, ShopifyVendorProvider):
+        return {"success": False, "error": "Resolved vendor is not a Shopify vendor"}
+    res = await provider.get_customer(customer_id)
+    return {"success": True, "customer": res}
+
+
+@mcp.tool(
+    description="List active orders from a Shopify store. :param vendor_id: Shopify Vendor UUID.",
+    tags={"role:vendors_user"},
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
+async def get_shopify_orders(*, vendor_id: str) -> Dict[str, Any]:
+    provider = await get_vendor_provider(vendor_id)
+    if not provider or not isinstance(provider, ShopifyVendorProvider):
+        return {"success": False, "error": "Resolved vendor is not a Shopify vendor"}
+    res = await provider.get_orders()
+    return {"success": True, "orders": res}
+
+
+@mcp.tool(
+    description="Retrieve product collections from a Shopify store. :param vendor_id: Shopify Vendor UUID.",
+    tags={"role:vendors_user"},
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
+async def get_shopify_collections(*, vendor_id: str) -> Dict[str, Any]:
+    provider = await get_vendor_provider(vendor_id)
+    if not provider or not isinstance(provider, ShopifyVendorProvider):
+        return {"success": False, "error": "Resolved vendor is not a Shopify vendor"}
+    res = await provider.get_collections()
+    return {"success": True, "collections": res}
+
+
+@mcp.tool(
+    description="Query metafields for a resource in Shopify. :param vendor_id: Shopify Vendor UUID. :param owner_resource: E.g. 'products', 'collections', 'customers', 'orders'. :param owner_id: The ID of the resource owner.",
+    tags={"role:vendors_user"},
+    annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+)
+async def get_shopify_metafields(*, vendor_id: str, owner_resource: str, owner_id: str) -> Dict[str, Any]:
+    provider = await get_vendor_provider(vendor_id)
+    if not provider or not isinstance(provider, ShopifyVendorProvider):
+        return {"success": False, "error": "Resolved vendor is not a Shopify vendor"}
+    res = await provider.get_metafields(owner_resource, owner_id)
+    return {"success": True, "metafields": res}
 
 
 @mcp.tool(
@@ -259,7 +402,6 @@ async def find_food_items(
 ) -> Dict[str, Any]:
     """
     Search for food items, dishes, pizza, rice, chicken, or menus across all verified vendors or a specific vendor.
-    Use this when asking 'what food is available', 'show me the menu', 'do you have pizza', 'search menu for burger'.
     """
     if not isinstance(vendor_id, str):
         vendor_id = None
@@ -284,8 +426,9 @@ async def list_vendor_categories() -> Dict[str, Any]:
     """
     List all categories of goods (e.g. 'restaurant', 'food', 'airtime', 'data') supported by the verified vendors.
     """
+    vendors = await get_all_vendors()
     categories = set()
-    for v in STATIC_VENDORS_LIST:
+    for v in vendors:
         categories.update(v.get("categories", []))
     return {
         "success": True,

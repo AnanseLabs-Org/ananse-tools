@@ -1,4 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
+from db import _get_db
+from vendors.provider import (
+    BaseVendorProvider,
+    HttpVendorProvider,
+    TelecomVendorProvider,
+    ShopifyVendorProvider
+)
 
 STATIC_VENDORS_LIST = [
     {
@@ -43,13 +50,6 @@ STATIC_VENDORS_LIST = [
 _INTERNAL_ONLY_FIELDS = {"menu_url", "order_url"}
 
 
-def _lookup_vendor(vendor_id: str) -> Optional[Dict[str, Any]]:
-    """
-    Internal lookup returning the FULL vendor record, including API endpoints.
-    """
-    return next((v for v in STATIC_VENDORS_LIST if v["vendor_id"] == vendor_id), None)
-
-
 def _public_vendor_view(vendor: Dict[str, Any]) -> Dict[str, Any]:
     """Strip internal-only fields (API endpoints) before exposing to the model."""
     return {k: v for k, v in vendor.items() if k not in _INTERNAL_ONLY_FIELDS}
@@ -71,3 +71,52 @@ def _expand_category_query(query: str) -> set[str]:
             expanded.add(key)
             expanded.update(syn_set)
     return expanded
+
+
+async def seed_vendors_if_empty(db) -> None:
+    """Helper to seed STATIC_VENDORS_LIST if the vendors collection is empty."""
+    count = await db.vendors.count_documents({})
+    if count == 0:
+        await db.vendors.insert_many(STATIC_VENDORS_LIST)
+
+
+async def get_all_vendors() -> List[Dict[str, Any]]:
+    """Fetch all vendors from MongoDB, seeding first if empty."""
+    db = _get_db()
+    if db is None:
+        return STATIC_VENDORS_LIST
+    await seed_vendors_if_empty(db)
+    cursor = db.vendors.find({}, {"_id": 0})
+    return await cursor.to_list(length=100)
+
+
+async def _lookup_vendor(vendor_id: str) -> Optional[Dict[str, Any]]:
+    """Internal lookup returning the FULL vendor record from MongoDB."""
+    db = _get_db()
+    if db is None:
+        return next((v for v in STATIC_VENDORS_LIST if v["vendor_id"] == vendor_id), None)
+    await seed_vendors_if_empty(db)
+    return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+
+
+async def get_vendor_provider(vendor_id: str) -> Optional[BaseVendorProvider]:
+    """
+    Look up vendor metadata and secure credentials, then instantiate the correct provider.
+    """
+    vendor_data = await _lookup_vendor(vendor_id)
+    if not vendor_data:
+        return None
+
+    db = _get_db()
+    credentials = None
+    if db is not None:
+        credentials = await db.shopify_credentials.find_one({"vendor_id": vendor_id}, {"_id": 0})
+
+    v_type = vendor_data.get("vendor_type")
+    if v_type == "shopify":
+        return ShopifyVendorProvider(vendor_data, credentials)
+    elif v_type == "internal_service":
+        return TelecomVendorProvider(vendor_data, credentials)
+    else:
+        # Defaults to HttpVendorProvider
+        return HttpVendorProvider(vendor_data, credentials)
