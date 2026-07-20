@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional, List
 from db import _get_db
+from middleware import _get_caller_roles
 from vendors.provider import (
     BaseVendorProvider,
     HttpVendorProvider,
@@ -73,6 +74,28 @@ def _expand_category_query(query: str) -> set[str]:
     return expanded
 
 
+def _filter_vendors_by_roles(vendors: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Filters the list of vendors based on the Keycloak client roles of the caller.
+    Roles with prefix 'vendor:' specify the allowed vendor_id.
+    """
+    roles = _get_caller_roles()
+    if not roles or "admin" in roles:
+        return vendors
+
+    vendor_role_ids = set()
+    has_vendor_restrict = False
+    for r in roles:
+        if r.startswith("vendor:"):
+            has_vendor_restrict = True
+            vendor_role_ids.add(r[len("vendor:"):])
+
+    if not has_vendor_restrict:
+        return vendors
+
+    return [v for v in vendors if v.get("vendor_id") in vendor_role_ids or v.get("name") in vendor_role_ids]
+
+
 async def seed_vendors_if_empty(db) -> None:
     """Helper to seed STATIC_VENDORS_LIST if the vendors collection is empty."""
     count = await db.vendors.count_documents({})
@@ -81,22 +104,30 @@ async def seed_vendors_if_empty(db) -> None:
 
 
 async def get_all_vendors() -> List[Dict[str, Any]]:
-    """Fetch all vendors from MongoDB, seeding first if empty."""
+    """Fetch all vendors from MongoDB, seeding first if empty, and filtering by roles."""
     db = _get_db()
     if db is None:
-        return STATIC_VENDORS_LIST
+        return _filter_vendors_by_roles(STATIC_VENDORS_LIST)
     await seed_vendors_if_empty(db)
     cursor = db.vendors.find({}, {"_id": 0})
-    return await cursor.to_list(length=100)
+    vendors = await cursor.to_list(length=100)
+    return _filter_vendors_by_roles(vendors)
 
 
 async def _lookup_vendor(vendor_id: str) -> Optional[Dict[str, Any]]:
-    """Internal lookup returning the FULL vendor record from MongoDB."""
+    """Internal lookup returning the FULL vendor record from MongoDB, filtered by roles."""
     db = _get_db()
     if db is None:
-        return next((v for v in STATIC_VENDORS_LIST if v["vendor_id"] == vendor_id), None)
+        vendors = _filter_vendors_by_roles(STATIC_VENDORS_LIST)
+        return next((v for v in vendors if v["vendor_id"] == vendor_id), None)
+    
     await seed_vendors_if_empty(db)
-    return await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+    vendor_data = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
+    if not vendor_data:
+        return None
+        
+    filtered = _filter_vendors_by_roles([vendor_data])
+    return filtered[0] if filtered else None
 
 
 async def get_vendor_provider(vendor_id: str) -> Optional[BaseVendorProvider]:
