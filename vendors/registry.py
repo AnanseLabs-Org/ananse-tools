@@ -8,46 +8,6 @@ from vendors.provider import (
     ShopifyVendorProvider
 )
 
-STATIC_VENDORS_LIST = [
-    {
-        "vendor_id": "234490c6-09e1-4125-b9cd-506d64eb2c50",
-        "name": "Horlap",
-        "categories": ["restaurant", "food_delivery", "food"],
-        "order_types": ["inhouse"],
-        "menu_url": "https://api.horlap.com/api/menu/",
-        "order_url": "https://api.horlap.com/api/orders/create-and-initiate-payment/",
-        "payment_methods": ["momo"],
-        "vendor_type": "external_api"
-    },
-    {
-        "vendor_id": "f5f0b5aa-399a-4c28-98b7-6b6f3ff8cfa0",
-        "name": "MTN Airtime & Data",
-        "categories": ["airtime", "data", "topup", "bundles"],
-        "vendor_type": "internal_service",
-        "service": "telecom",
-        "network": "MTN",
-        "payment_methods": ["momo"]
-    },
-    {
-        "vendor_id": "a90b4cc5-5c12-4217-bfd2-c76a54f0a99c",
-        "name": "Telecel Airtime & Data",
-        "categories": ["airtime", "data", "topup", "bundles"],
-        "vendor_type": "internal_service",
-        "service": "telecom",
-        "network": "TELECEL",
-        "payment_methods": ["momo"]
-    },
-    {
-        "vendor_id": "d02fa3c5-92a0-410a-8bf7-e16fa5cfc99b",
-        "name": "AirtelTigo Airtime & Data",
-        "categories": ["airtime", "data", "topup", "bundles"],
-        "vendor_type": "internal_service",
-        "service": "telecom",
-        "network": "AIRTELTIGO",
-        "payment_methods": ["momo"]
-    }
-]
-
 _INTERNAL_ONLY_FIELDS = {"menu_url", "order_url"}
 
 
@@ -96,19 +56,11 @@ def _filter_vendors_by_roles(vendors: List[Dict[str, Any]]) -> List[Dict[str, An
     return [v for v in vendors if v.get("vendor_id") in vendor_role_ids or v.get("name") in vendor_role_ids]
 
 
-async def seed_vendors_if_empty(db) -> None:
-    """Helper to seed STATIC_VENDORS_LIST if the vendors collection is empty."""
-    count = await db.vendors.count_documents({})
-    if count == 0:
-        await db.vendors.insert_many(STATIC_VENDORS_LIST)
-
-
 async def get_all_vendors() -> List[Dict[str, Any]]:
-    """Fetch all vendors from MongoDB, seeding first if empty, and filtering by roles."""
+    """Fetch all vendors from MongoDB."""
     db = _get_db()
     if db is None:
-        return _filter_vendors_by_roles(STATIC_VENDORS_LIST)
-    await seed_vendors_if_empty(db)
+        return []
     cursor = db.vendors.find({}, {"_id": 0})
     vendors = await cursor.to_list(length=100)
     return _filter_vendors_by_roles(vendors)
@@ -118,10 +70,8 @@ async def _lookup_vendor(vendor_id: str) -> Optional[Dict[str, Any]]:
     """Internal lookup returning the FULL vendor record from MongoDB, filtered by roles."""
     db = _get_db()
     if db is None:
-        vendors = _filter_vendors_by_roles(STATIC_VENDORS_LIST)
-        return next((v for v in vendors if v["vendor_id"] == vendor_id), None)
+        return None
     
-    await seed_vendors_if_empty(db)
     vendor_data = await db.vendors.find_one({"vendor_id": vendor_id}, {"_id": 0})
     if not vendor_data:
         return None
