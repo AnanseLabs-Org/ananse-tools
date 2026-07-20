@@ -1,7 +1,10 @@
 import httpx
+import logging
 from typing import Any, Dict, List, Optional
 from http_client import _call_vendor_api
 from vendors.menu import _flatten_menu
+
+logger = logging.getLogger("mcp-shopify-provider")
 
 class BaseVendorProvider:
     def __init__(self, vendor_data: Dict[str, Any], credentials: Optional[Dict[str, Any]] = None):
@@ -71,10 +74,14 @@ class ShopifyVendorProvider(BaseVendorProvider):
 
     @property
     def admin_base_url(self) -> str:
+        if "." in self.shop_name:
+            return f"https://{self.shop_name}/admin/api/{self.api_version}"
         return f"https://{self.shop_name}.myshopify.com/admin/api/{self.api_version}"
 
     @property
     def storefront_url(self) -> str:
+        if "." in self.shop_name:
+            return f"https://{self.shop_name}/api/{self.api_version}/graphql.json"
         return f"https://{self.shop_name}.myshopify.com/api/{self.api_version}/graphql.json"
 
     async def _graphql_storefront(self, query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -82,10 +89,16 @@ class ShopifyVendorProvider(BaseVendorProvider):
             "Content-Type": "application/json",
             "X-Shopify-Storefront-Access-Token": self.storefront_token
         }
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(self.storefront_url, json={"query": query, "variables": variables}, headers=headers)
-            resp.raise_for_status()
-            return resp.json()
+        logger.info(f"Shopify Storefront request to URL: {self.storefront_url} with query:\n{query}")
+        try:
+            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+                resp = await client.post(self.storefront_url, json={"query": query, "variables": variables}, headers=headers)
+                logger.info(f"Shopify Storefront response received with status code: {resp.status_code}")
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            logger.error(f"Shopify Storefront products fetch failed: {e}")
+            raise
 
     async def _admin_request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
         headers = {
@@ -93,10 +106,16 @@ class ShopifyVendorProvider(BaseVendorProvider):
             "X-Shopify-Access-Token": self.admin_token
         }
         url = f"{self.admin_base_url}/{path.lstrip('/')}"
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.request(method, url, headers=headers, **kwargs)
-            resp.raise_for_status()
-            return resp.json()
+        logger.info(f"Shopify Admin request {method} to URL: {url}")
+        try:
+            async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+                resp = await client.request(method, url, headers=headers, **kwargs)
+                logger.info(f"Shopify Admin response received with status code: {resp.status_code}")
+                resp.raise_for_status()
+                return resp.json()
+        except Exception as e:
+            logger.error(f"Shopify Admin request failed: {e}")
+            raise
 
     async def get_menu(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
         # Fetch products via Storefront API and map them to dish format
