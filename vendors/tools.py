@@ -150,8 +150,11 @@ async def create_verified_vendors_order(
     *,
     vendor_id: str,
     items: List[VendorOrderItem],
-    payment_number: str,
-    network: str,
+    payment_number: Optional[str] = None,
+    network: Optional[str] = None,
+    momo_number: Optional[str] = None,
+    momo_network: Optional[str] = None,
+    customer_name: Optional[str] = None,
     order_type: str = "inhouse",
     table_number: Any = None,
     delivery_address: Any = None,
@@ -159,6 +162,14 @@ async def create_verified_vendors_order(
     """
     Place an order with a food/goods vendor and register it in MongoDB for tracked payment collection.
     """
+    resolved_payment_number = payment_number or momo_number
+    resolved_network = network or momo_network
+
+    if not resolved_payment_number:
+        return {"success": False, "error": "payment_number or momo_number is required"}
+    if not resolved_network:
+        return {"success": False, "error": "network or momo_network is required"}
+
     if table_number is not None:
         table_number = str(table_number).strip() or None
     if delivery_address is not None:
@@ -229,8 +240,9 @@ async def create_verified_vendors_order(
             "vendor_id": vendor_id,
             "vendor_name": provider.name,
             "items": serialized_items,
-            "payment_number": payment_number,
-            "network": network,
+            "payment_number": resolved_payment_number,
+            "network": resolved_network,
+            "customer_name": customer_name,
             "order_type": order_type,
             "table_number": table_number,
             "delivery_address": delivery_address,
@@ -297,7 +309,12 @@ async def initiate_order_payment(*, order_id: str) -> Dict[str, Any]:
 
     # In a full production loop, we would await webhook/callback verification.
     # For integration flow, we proceed directly to vendor creation if prompt is successfully dispatched.
-    if not momo_result.get("success", False) and momo_result.get("status") != "PENDING":
+    is_momo_success = (
+        momo_result.get("success") is True 
+        or "Payment Initiated Successful" in momo_result.get("message", "")
+        or momo_result.get("status") == "PENDING"
+    )
+    if not is_momo_success:
         return {
             "success": False,
             "error": "Mobile Money prompt initiation failed.",
