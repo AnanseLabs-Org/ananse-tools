@@ -292,7 +292,7 @@ async def initiate_order_payment(*, order_id: str) -> Dict[str, Any]:
         phone_number=pay_number,
         network=network,
         transaction_id=order_id,
-        reference=f"Pay order {order_id}"
+        reference=order_id
     )
 
     # In a full production loop, we would await webhook/callback verification.
