@@ -13,7 +13,7 @@ from starlette.responses import PlainTextResponse, Response
 from starlette.routing import Route
 
 from middleware import KeycloakRoleMiddleware
-from fastmcp.server.transforms.search import BM25SearchTransform
+
 
 # ── Global fastmcp settings ─────────────────────────────────────────────────
 fastmcp.settings.sse_path = "/"
@@ -74,8 +74,7 @@ mcp.add_provider(SkillsDirectoryProvider(roots=skills_path, reload=True))
 # Role-based authorization: reads realm_access.roles from the Keycloak JWT
 mcp.add_middleware(KeycloakRoleMiddleware())
 
-# Compress tool list and require search/call-tool for hidden tools
-mcp.add_transform(BM25SearchTransform(always_visible=["search", "get_token_info"]))
+
 
 # Mount general tools under "general" namespace
 mcp.mount(general, namespace="general")
