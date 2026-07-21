@@ -27,7 +27,7 @@ async def momo_collect(
     data = {
         "amount": amount,
         "phone_number": phone_number,
-        "network": network,
+        "network": network.upper(),
         "transaction_id": transaction_id,
         "callback_url": callback_url or _get_default_callback_url()
     }
@@ -128,7 +128,7 @@ async def momo_disburse(
     data = {
         "amount": amount,
         "phone_number": phone_number,
-        "network": network,
+        "network": network.upper(),
         "transaction_id": transaction_id,
         "callback_url": callback_url or _get_default_callback_url()
     }

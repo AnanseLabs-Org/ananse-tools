@@ -103,7 +103,7 @@ async def data_purchase(
         "service_id": service_id,
         "name": customer_name or _get_default_customer_name(),
         "package_id": bundle_id,
-        "network": network,
+        "network": network.upper(),
         "type": "momo",
     }
     if transaction_id:

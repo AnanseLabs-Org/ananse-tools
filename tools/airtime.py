@@ -46,7 +46,7 @@ async def airtime_purchase(
     payload = {
         "destination": destination,
         "phoneNumber": phone_number,
-        "network": network,
+        "network": network.upper(),
         "amount": amount,
         "network_id": network_id,
         "type": payment_type,

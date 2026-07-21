@@ -62,7 +62,7 @@ async def create_verified_vendors_order(
     Place an order with a food/goods vendor and register it in MongoDB for tracked payment collection.
     """
     resolved_payment_number = payment_number or momo_number
-    resolved_network = network or momo_network
+    resolved_network = (network or momo_network).upper() if (network or momo_network) else None
 
     if not resolved_payment_number:
         return {"success": False, "error": "payment_number or momo_number is required"}
