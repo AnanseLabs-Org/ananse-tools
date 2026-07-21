@@ -43,10 +43,19 @@ async def airtime_purchase(
     :param network_id: Network UUID from airtime_get_networks.
     :param payment_type: Payment type (usually 'momo').
     """
+    network_upper = network.upper()
+    mapping = {
+        "MTN": "MTN",
+        "TELECEL": "VDF",
+        "VODAFONE": "VDF",
+        "AIRTELTIGO": "ATL"
+    }
+    mapped_network = mapping.get(network_upper, network_upper)
+
     payload = {
         "destination": destination,
         "phoneNumber": phone_number,
-        "network": network.upper(),
+        "network": mapped_network,
         "amount": amount,
         "network_id": network_id,
         "type": payment_type,
