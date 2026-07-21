@@ -80,6 +80,39 @@ class KeycloakRoleMiddleware(Middleware):
         return [t for t in tools if _caller_has_access(t, caller_roles)]
 
     async def on_call_tool(self, context: MiddlewareContext, call_next):
+        if context.fastmcp_context:
+            mcp_instance = context.fastmcp_context.fastmcp
+            original_name = context.message.name
+            
+            tool_exists = False
+            try:
+                await mcp_instance.get_tool(original_name)
+                tool_exists = True
+            except Exception:
+                pass
+                
+            if not tool_exists:
+                registered_tools = mcp_instance.list_tools()
+                for tool in registered_tools:
+                    suffix = f"_{tool.name}"
+                    if original_name.endswith(suffix):
+                        new_message = context.message.model_copy(update={"name": tool.name})
+                        
+                        if tool.name == "call_tool" and new_message.arguments:
+                            target_name = new_message.arguments.get("name")
+                            if target_name:
+                                for t2 in registered_tools:
+                                    suffix2 = f"_{t2.name}"
+                                    if target_name.endswith(suffix2):
+                                        args_copy = dict(new_message.arguments)
+                                        args_copy["name"] = t2.name
+                                        new_message = new_message.model_copy(update={"arguments": args_copy})
+                                        break
+                                        
+                        context = context.copy(message=new_message)
+                        log.info("Re-routed tool call from %s to %s", original_name, tool.name)
+                        break
+
         caller_roles = _get_caller_roles()
         if "admin" not in caller_roles and context.fastmcp_context:
             try:
