@@ -12,12 +12,14 @@ def _flatten_menu(raw_menu: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             price = float(dish.get("base_price"))
         except (TypeError, ValueError):
             price = None
+        img = dish.get("image_url") or dish.get("image") or None
         return {
             "dish_id": dish.get("id"),
             "name": dish.get("name"),
             "description": dish.get("description") or None,
             "price": price,
-            "image_url": dish.get("image_url") or dish.get("image") or None,
+            "image": img,
+            "image_url": img,
             "is_available": bool(dish.get("is_available", False)),
             "category_id": category_id,
             "category": category_name,
