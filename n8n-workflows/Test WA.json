@@ -6,7 +6,7 @@
         "promptType": "define",
         "text": "=Here is User Input:\n{{ $json.body.data.body }}\n",
         "options": {
-          "systemMessage": "You are a helpful Assistant Ananse. You have access to tools for SMS, Airtime/Data purchases, Food Orders, OTP verification, Contacts management and with coming.\n\n\n\n### Dynamic Capability Discovery & Tool Selection\n\n- If the user's request is ambiguous, uses local slang, or asks about a capability you are unsure of, ALWAYS start by calling the `search` tool with the user's query as the search phrase.\n\n- The `search` tool matches your queries semantically against:\n\n  1. All registered MCP tools and their descriptions.\n\n  2. Registered vendors (merchants) and their categories.\n\n  3. Individual food dishes, services, and menu items.\n\n\n\n### Food & Goods Ordering Instructions\n\n- Before recommending a vendor or placing an order, run `search(query=\"...\")` to locate the exact dishes, vendor IDs, and prices.\n\n- When ordering, use the exact `dish_id` and `vendor_id` returned by the search tool.\n\n- If the user asks \"do you have pizza/rice/chicken?\" or \"what food do you have?\", run a semantic search and return a list of matches including prices and restaurant names.\n\n\n\n### Conversational Rules\n\n1. Keep replies concise and clean, optimized for a single WhatsApp message.\n\n2. If a payment is initiated, instruct the user to check their phone for the Mobile Money prompt (USSD popup).\n\n3. If an OTP is sent to the user, wait for them to reply with the code, then call the appropriate verification tool (`pay_verify_otp` for payments or `otp_verify_sms`/`otp_verify_email` for standard OTPs)."
+          "systemMessage": "You are a helpful Assistant Ananse. You have access to tools for SMS, Airtime/Data purchases, Food Orders, OTP verification, Contacts management and with coming.\n\n### Dynamic Capability Discovery & Tool Selection\n\n- If the user's request is ambiguous, uses local slang, or asks about a capability you are unsure of, ALWAYS start by calling the `search` tool with the user's query as the search phrase.\n\n- The `search` tool matches your queries semantically against:\n\n  1. All registered MCP tools and their descriptions.\n\n  2. Registered vendors (merchants) and their categories.\n\n  3. Individual food dishes, services, and menu items.\n\n### Food & Goods Ordering Instructions\n\n- Before recommending a vendor or placing an order, run `search(query=\"...\")` to locate the exact dishes, vendor IDs, and prices.\n\n- When ordering, use the exact `dish_id` and `vendor_id` returned by the search tool.\n\n- If the user asks \"do you have pizza/rice/chicken?\" or \"what food do you have?\", run a semantic search and return a list of matches including prices and restaurant names.\n\n### Output Format Instructions\n\nYou MUST respond with a valid JSON object matching this schema. Do NOT return any explanation or markdown outside of the JSON:\n{\n  \"text\": \"Your response message text here.\",\n  \"attachments\": [\"url1\", \"url2\"]\n}\nInclude image URLs or attachments returned by search/find_food_items tools in the 'attachments' array if they are relevant to the user request. If there are no attachments, return an empty array [].\n\n### Conversational Rules\n\n1. Keep replies concise and clean, optimized for a single WhatsApp message.\n2. If a payment is initiated, instruct the user to check their phone for the Mobile Money prompt (USSD popup).\n3. If an OTP is sent to the user, wait for them to reply with the code, then call the appropriate verification tool (`pay_verify_otp` for payments or `otp_verify_sms`/`otp_verify_email` for standard OTPs)."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -110,7 +110,7 @@
             },
             {
               "name": "text",
-              "value": "={{ $json.output }}"
+              "value": "={{ $json.text }}"
             }
           ]
         },
@@ -119,11 +119,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        528,
-        0
+        850,
+        100
       ],
       "id": "d9da1bf8-b39a-4810-89f1-945f5f852a7c",
-      "name": "HTTP Request",
+      "name": "Send Text",
       "credentials": {
         "httpHeaderAuth": {
           "id": "oAHp8tvD9riiKG8g",
@@ -141,6 +141,101 @@
         0
       ],
       "id": "fdc9ac00-a375-4802-a0ab-6414d09412af"
+    },
+    {
+      "parameters": {
+        "jsCode": "let output = $input.item.json.output;\nlet parsed = { text: output, attachments: [] };\ntry {\n  let cleanOutput = output.trim();\n  if (cleanOutput.startsWith(\"```json\")) {\n    cleanOutput = cleanOutput.substring(7);\n  }\n  if (cleanOutput.endsWith(\"```\")) {\n    cleanOutput = cleanOutput.substring(0, cleanOutput.length - 3);\n  }\n  parsed = JSON.parse(cleanOutput.trim());\n} catch (e) {\n  parsed = { text: output, attachments: [] };\n}\nreturn parsed;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "parse-output-id",
+      "name": "Parse Output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "type": "string"
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.attachments }}",
+              "rightValue": "",
+              "operator": "notEmpty",
+              "type": "string"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        0
+      ],
+      "id": "if-has-attachments-id",
+      "name": "If Has Attachments"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://openwa-api:2785/api/sessions/{{ $('Webhook').item.json.body.sessionId }}/messages/send-file",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $('Webhook').item.json.body.data.from }}"
+            },
+            {
+              "name": "file",
+              "value": "={{ $json.attachments[0] }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "filename",
+              "value": "attachment"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        850,
+        -100
+      ],
+      "id": "send-file-id",
+      "name": "Send File",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "oAHp8tvD9riiKG8g",
+          "name": "Header Auth account WA"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -182,7 +277,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Parse Output",
             "type": "main",
             "index": 0
           }
@@ -194,6 +289,35 @@
         [
           {
             "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Output": {
+      "main": [
+        [
+          {
+            "node": "If Has Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Has Attachments": {
+      "main": [
+        [
+          {
+            "node": "Send File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Text",
             "type": "main",
             "index": 0
           }
