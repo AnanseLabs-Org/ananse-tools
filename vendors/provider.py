@@ -128,6 +128,13 @@ class ShopifyVendorProvider(BaseVendorProvider):
                 title
                 description
                 availableForSale
+                images(first: 1) {
+                  edges {
+                    node {
+                      url
+                    }
+                  }
+                }
                 variants(first: 10) {
                   edges {
                     node {
@@ -154,6 +161,8 @@ class ShopifyVendorProvider(BaseVendorProvider):
                 prod_id = node.get("id")
                 title = node.get("title")
                 desc = node.get("description")
+                images = node.get("images", {}).get("edges", [])
+                image_url = images[0]["node"]["url"] if images else None
                 variants = node.get("variants", {}).get("edges", [])
                 
                 # If single variant, flatten
@@ -164,6 +173,7 @@ class ShopifyVendorProvider(BaseVendorProvider):
                         "name": title,
                         "description": desc,
                         "price": price,
+                        "image_url": image_url,
                         "is_available": node.get("availableForSale", False),
                         "category": "Shopify Product",
                         "addons": []
@@ -185,6 +195,7 @@ class ShopifyVendorProvider(BaseVendorProvider):
                         "name": title,
                         "description": desc,
                         "price": price,
+                        "image_url": image_url,
                         "is_available": node.get("availableForSale", False),
                         "category": "Shopify Product",
                         "addons": addons

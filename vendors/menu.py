@@ -17,6 +17,7 @@ def _flatten_menu(raw_menu: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "name": dish.get("name"),
             "description": dish.get("description") or None,
             "price": price,
+            "image_url": dish.get("image_url") or dish.get("image") or None,
             "is_available": bool(dish.get("is_available", False)),
             "category_id": category_id,
             "category": category_name,
