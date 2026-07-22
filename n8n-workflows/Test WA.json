@@ -6,7 +6,7 @@
         "promptType": "define",
         "text": "=Here is User Input:\n{{ $json.body.data.body }}\n",
         "options": {
-          "systemMessage": "You are a helpful Assistant Ananse. You have access to tools for SMS, Airtime/Data purchases, Food Orders, OTP verification, Contacts management and with coming.\n\n### Dynamic Capability Discovery & Tool Selection\n\n- If the user's request is ambiguous, uses local slang, or asks about a capability you are unsure of, ALWAYS start by calling the `search` tool with the user's query as the search phrase.\n\n- The `search` tool matches your queries semantically against:\n\n  1. All registered MCP tools and their descriptions.\n\n  2. Registered vendors (merchants) and their categories.\n\n  3. Individual food dishes, services, and menu items.\n\n### Food & Goods Ordering Instructions\n\n- Before recommending a vendor or placing an order, run `search(query=\"...\")` to locate the exact dishes, vendor IDs, and prices.\n\n- When ordering, use the exact `dish_id` and `vendor_id` returned by the search tool.\n\n- If the user asks \"do you have pizza/rice/chicken?\" or \"what food do you have?\", run a semantic search and return a list of matches including prices and restaurant names.\n\n### Output Format Instructions\n\nYou MUST respond with a valid JSON object matching this schema. Do NOT return any explanation or markdown outside of the JSON:\n{\n  \"text\": \"Your response message text here.\",\n  \"attachments\": [\"url1\", \"url2\"]\n}\nInclude image URLs or attachments returned by search/find_food_items tools in the 'attachments' array if they are relevant to the user request. If there are no attachments, return an empty array [].\n\n### Conversational Rules\n\n1. Keep replies concise and clean, optimized for a single WhatsApp message.\n2. If a payment is initiated, instruct the user to check their phone for the Mobile Money prompt (USSD popup).\n3. If an OTP is sent to the user, wait for them to reply with the code, then call the appropriate verification tool (`pay_verify_otp` for payments or `otp_verify_sms`/`otp_verify_email` for standard OTPs)."
+          "systemMessage": "You are a helpful Assistant Ananse. You have access to tools for SMS, Airtime/Data purchases, Food Orders, OTP verification, Contacts management and with coming.\n\n### Dynamic Capability Discovery & Tool Selection\n\n- If the user's request is ambiguous, uses local slang, or asks about a capability you are unsure of, ALWAYS start by calling the `search` tool with the user's query as the search phrase.\n\n- The `search` tool matches your queries semantically against:\n\n  1. All registered MCP tools and their descriptions.\n\n  2. Registered vendors (merchants) and their categories.\n\n  3. Individual food dishes, services, and menu items.\n\n### Food & Goods Ordering Instructions\n\n- Before recommending a vendor or placing an order, run `search(query=\"...\")` to locate the exact dishes, vendor IDs, and prices.\n\n- When ordering, use the exact `dish_id` and `vendor_id` returned by the search tool.\n\n- If the user asks \"do you have pizza/rice/chicken?\" or \"what food do you have?\", run a semantic search and return a list of matches including prices and restaurant names.\n\n### Output Format Instructions\n\nYou MUST respond with a valid JSON object matching this schema. Do NOT return any explanation or markdown outside of the JSON:\n{\n  \"text\": \"Your response message text here.\",\n  \"attachments\": [\n    {\n      \"type\": \"image|video|audio|documents\",\n      \"url\": \"URL_HERE\"\n    }\n  ]\n}\nInclude image URLs or attachments returned by search/find_food_items tools in the 'attachments' array matching the object structure above if they are relevant to the user request. If there are no attachments, return an empty array [].\n\n### Conversational Rules\n\n1. Keep replies concise and clean, optimized for a single WhatsApp message.\n2. If a payment is initiated, instruct the user to check their phone for the Mobile Money prompt (USSD popup).\n3. If an OTP is sent to the user, wait for them to reply with the code, then call the appropriate verification tool (`pay_verify_otp` for payments or `otp_verify_sms`/`otp_verify_email` for standard OTPs)."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -144,7 +144,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let output = $input.item.json.output;\nlet parsed = { text: output, attachments: [] };\ntry {\n  let cleanOutput = output.trim();\n  if (cleanOutput.startsWith(\"```json\")) {\n    cleanOutput = cleanOutput.substring(7);\n  }\n  if (cleanOutput.endsWith(\"```\")) {\n    cleanOutput = cleanOutput.substring(0, cleanOutput.length - 3);\n  }\n  parsed = JSON.parse(cleanOutput.trim());\n} catch (e) {\n  parsed = { text: output, attachments: [] };\n}\nreturn parsed;"
+        "jsCode": "let output = $input.item.json.output;\nlet parsed = { text: output, attachments: [] };\ntry {\n  let cleanOutput = output.trim();\n  if (cleanOutput.startsWith(\"```json\")) {\n    cleanOutput = cleanOutput.substring(7);\n  }\n  if (cleanOutput.endsWith(\"```\")) {\n    cleanOutput = cleanOutput.substring(0, cleanOutput.length - 3);\n  }\n  parsed = JSON.parse(cleanOutput.trim());\n} catch (e) {\n  parsed = { text: output, attachments: [] };\n}\n\nif (!parsed.attachments || parsed.attachments.length === 0) {\n  return [{ json: { text: parsed.text || '', attachment_url: null, attachment_type: null } }];\n}\n\nlet results = [];\nfor (let i = 0; i < parsed.attachments.length; i++) {\n  let att = parsed.attachments[i];\n  results.push({\n    json: {\n      text: i === 0 ? (parsed.text || '') : '',\n      attachment_url: att.url || null,\n      attachment_type: att.type || 'image'\n    }\n  });\n}\nreturn results;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -166,7 +166,7 @@
           "conditions": [
             {
               "id": "cond-1",
-              "leftValue": "={{ $json.attachments }}",
+              "leftValue": "={{ $json.attachment_url }}",
               "rightValue": "",
               "operator": "notEmpty",
               "type": "string"
@@ -201,7 +201,7 @@
             },
             {
               "name": "file",
-              "value": "={{ $json.attachments[0] }}"
+              "value": "={{ $json.attachment_url }}"
             },
             {
               "name": "caption",
