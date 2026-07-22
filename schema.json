@@ -11,14 +11,45 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["image", "video", "audio", "documents"]
+            "enum": ["image", "video", "audio", "documents", "location"]
           },
           "url": {
             "type": "string",
             "format": "uri"
+          },
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 1024
           }
         },
-        "required": ["type", "url"]
+        "required": ["type"],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "location"
+                }
+              }
+            },
+            "then": {
+              "required": ["latitude", "longitude"]
+            },
+            "else": {
+              "required": ["url"]
+            }
+          }
+        ]
       }
     }
   },

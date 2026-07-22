@@ -49,14 +49,14 @@ async def create_verified_vendors_order(
     *,
     vendor_id: str,
     items: List[VendorOrderItem],
-    payment_number: Optional[str] = None,
-    network: Optional[str] = None,
-    momo_number: Optional[str] = None,
-    momo_network: Optional[str] = None,
-    customer_name: Optional[str] = None,
+    payment_number: str = "",
+    network: str = "",
+    momo_number: str = "",
+    momo_network: str = "",
+    customer_name: str = "",
     order_type: str = "inhouse",
-    table_number: Any = None,
-    delivery_address: Any = None,
+    table_number: str = "",
+    delivery_address: str = "",
 ) -> Dict[str, Any]:
     """
     Place an order with a food/goods vendor and register it in MongoDB for tracked payment collection.

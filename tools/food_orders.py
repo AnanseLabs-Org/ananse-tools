@@ -17,8 +17,8 @@ async def save_customer_profile(
     customer_name: str,
     phone_number: str,
     address: str,
-    landmark: str = None,
-    default_payment_phone: str = None
+    landmark: str = "",
+    default_payment_phone: str = ""
 ) -> Dict[str, Any]:
     """
     Save or update a customer profile in MongoDB, including delivery address, landmark, and default MoMo payment number.
@@ -74,7 +74,7 @@ from pydantic import BaseModel, Field
 class MerchantOrderItem(BaseModel):
     name: str = Field(..., description="The name of the food item or dish")
     quantity: int = Field(..., description="The quantity of the item to order")
-    notes: Optional[str] = Field(None, description="Optional special instructions (e.g. 'no onions')")
+    notes: str = Field("", description="Optional special instructions (e.g. 'no onions')")
 
 @mcp.tool(
     description="Place a food order directly with a restaurant merchant. Creates an order record in MongoDB, triggers MoMo payment collection from customer, and sends an order SMS dispatch to the merchant.",
@@ -89,7 +89,7 @@ async def place_merchant_order(
     customer_phone: str,
     delivery_address: str,
     amount_ghc: float,
-    payment_phone: str = None,
+    payment_phone: str = "",
     payment_network: str = "MTN"
 ) -> Dict[str, Any]:
     """

@@ -27,12 +27,12 @@ async def airtime_purchase(
     amount: float,
     network_id: str,
     payment_type: str = "momo",
-    transaction_id: str | None = None,
+    transaction_id: str = "",
     await_payment: bool = True,
     timeout_seconds: int = 120,
     poll_interval_seconds: int = 5,
-    callback_url: str | None = None,
-    reference: str | None = None,
+    callback_url: str = "",
+    reference: str = "",
 ) -> Dict[str, Any]:
     """
     Start an airtime purchase using the BulkClix purchase route.

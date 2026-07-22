@@ -11,8 +11,8 @@ async def bank_transfer_send(
     account_name: str,
     bank_code: str,
     transaction_id: str,
-    narration: Optional[str] = None,
-    callback_url: Optional[str] = None
+    narration: str = "",
+    callback_url: str = ""
 ) -> Dict[str, Any]:
     """
     Transfer funds from your BulkClix wallet to a bank account.

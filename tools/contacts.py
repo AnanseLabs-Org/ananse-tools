@@ -30,7 +30,7 @@ async def contacts_update_group(
     *,
     group_id: str,
     name: str,
-    group_icon: Optional[str] = None
+    group_icon: str = ""
 ) -> Dict[str, Any]:
     """
     Update details of a contact group.
@@ -67,7 +67,7 @@ async def contacts_add(
     last_name: str,
     phone_number: str,
     contact_group_id: str,
-    email: Optional[str] = None
+    email: str = ""
 ) -> Dict[str, Any]:
     """
     Add a single contact to a group.
@@ -104,9 +104,9 @@ async def contacts_add_bulk(
 async def contacts_update(
     *,
     contact_id: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    phone_number: Optional[str] = None
+    first_name: str = "",
+    last_name: str = "",
+    phone_number: str = ""
 ) -> Dict[str, Any]:
     """
     Update contact details.

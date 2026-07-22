@@ -40,7 +40,7 @@ def _find_bundle_price(payload: Any, bundle_id: str) -> float | None:
 )
 async def data_get_bundles(
     *,
-    network_id: str | None = None
+    network_id: str = ""
 ) -> Dict[str, Any]:
     """
     List available data bundle services.
@@ -80,13 +80,13 @@ async def data_purchase(
     network_id: str,
     service_id: str,
     network: str,
-    customer_name: str | None = None,
-    transaction_id: str | None = None,
+    customer_name: str = "",
+    transaction_id: str = "",
     await_payment: bool = True,
     timeout_seconds: int = 120,
     poll_interval_seconds: int = 5,
-    callback_url: str | None = None,
-    reference: str | None = None,
+    callback_url: str = "",
+    reference: str = "",
 ) -> Dict[str, Any]:
     """
     Start a data bundle purchase using the BulkClix purchase route.
@@ -128,8 +128,8 @@ async def data_purchase(
 async def data_check_status(
     *,
     order_id: str,
-    payment_id: str | None = None,
-    transaction_id: str | None = None
+    payment_id: str = "",
+    transaction_id: str = ""
 ) -> Dict[str, Any]:
     """
     Check the status of a data bundle payment or purchase by order ID.

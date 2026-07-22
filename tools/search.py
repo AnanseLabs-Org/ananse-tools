@@ -143,7 +143,7 @@ from middleware import _get_caller_roles
 async def search(
     *,
     query: str,
-    vendor_id: Any = None,
+    vendor_id: str = "",
     top_n: int = 5,
 ) -> Dict[str, Any]:
     """
